@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Day Sync - Главная</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .event-card {
+            transition: transform 0.3s;
+            border-radius: 15px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .event-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .sport-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+        .map-preview {
+            height: 150px;
+            background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+        }
+
+        .category-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 2;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Шапка -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="logo.jpg" alt="MDS" height="60">
+            </a>
+            <!-- Навигация -->
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Календарь</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Сообщества</a>
+                    </li>
+                </ul>
+
+                <!-- Поиск и профиль -->
+                <div class="d-flex align-items-center">
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
+                            data-bs-toggle="dropdown">
+                            <img src="Person.svg" class="me-2" width="32" height="32" alt="Профиль">
+                            <span>Иван Петров</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#">Мой профиль</a></li>
+                            <li><a class="dropdown-item" href="#">Мои мероприятия</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger" href="#">Выйти</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Основной контент -->
+    <div class="container my-4">
+        <div class="row">
+            <!-- Боковая панель -->
+            <div class="col-lg-3 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        Фильтры мероприятий
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Дата</label>
+                            <select class="form-select">
+                                <option>Любая</option>
+                                <option>Сегодня</option>
+                                <option>Завтра</option>
+                                <option>На выходных</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Вид спорта</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="running">
+                                <label class="form-check-label" for="running">
+                                    🏃 Бег
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cycling">
+                                <label class="form-check-label" for="cycling">
+                                    🚴 Велоспорт
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="football">
+                                <label class="form-check-label" for="football">
+                                    ⚽ Футбол
+                                </label>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary w-100">Применить фильтры</button>
+                    </div>
+                </div>
+
+                <!-- Блок "Ваши события" -->
+                <div class="card mt-4">
+                    <div class="card-header bg-info text-white">
+                        Ваши события
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Забег на 10км
+                            <span class="badge bg-success">Завтра</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Велотур по парку
+                            <span class="badge bg-primary">Через 3 дня</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Футбольный турнир
+                            <span class="badge bg-warning text-dark">Не подтверждено</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Лента мероприятий -->
+            <div class="col-lg-9">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Предстоящие мероприятия</h2>
+                    <div class="input-group me-3">
+                        <input type="text" class="form-control" placeholder="Найти мероприятие">
+                        <button class="btn btn-outline-primary" type="button">
+                            <i class="bi bi-search"></i><img src="Search.svg" class="sport-icon">
+                        </button>
+                    </div>
+                    <button class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Создать событие
+                    </button>
+                </div>
+
+                <!-- Карточки мероприятий -->
+                <div class="row row-cols-1 row-cols-md-2 g-4">
+                    <!-- Мероприятие 1 -->
+                    <div class="col">
+                        <div class="card h-100 event-card">
+                            <span class="category-badge badge bg-danger">Бесплатно</span>
+                            <div class="map-preview"></div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h5 class="card-title">Вечерний забег в Парке Горького</h5>
+                                    <img src="running.svg" class="sport-icon" alt="Бег">
+                                </div>
+                                <p class="card-text">
+                                    <i class="bi bi-calendar"></i> Сегодня, 19:00<br>
+                                    <i class="bi bi-geo-alt"></i> Парк Горького, Москва<br>
+                                    <i class="bi bi-people"></i> 45 участников
+                                </p>
+                                <div class="d-flex justify-content-between">
+                                    <button class="btn btn-outline-primary">Подробнее</button>
+                                    <button class="btn btn-primary">Участвовать</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Мероприятие 2 -->
+                    <div class="col">
+                        <div class="card h-100 event-card">
+                            <span class="category-badge badge bg-warning text-dark">500 ₽</span>
+                            <div class="map-preview"></div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h5 class="card-title">Велосипедный марафон "Кольцо Москвы"</h5>
+                                    <img src="cycling.svg" class="sport-icon" alt="Велоспорт">
+                                </div>
+                                <p class="card-text">
+                                    <i class="bi bi-calendar"></i> 15 июля, 10:00<br>
+                                    <i class="bi bi-geo-alt"></i> Воробьевы горы<br>
+                                    <i class="bi bi-people"></i> 127 участников
+                                </p>
+                                <div class="d-flex justify-content-between">
+                                    <button class="btn btn-outline-primary">Подробнее</button>
+                                    <button class="btn btn-primary">Участвовать</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Мероприятие 3 -->
+                    <div class="col">
+                        <div class="card h-100 event-card">
+                            <span class="category-badge badge bg-danger">Бесплатно</span>
+                            <div class="map-preview"></div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h5 class="card-title">Футбольный турнир "Летний кубок"</h5>
+                                    <img src="football.svg" class="sport-icon" alt="Футбол">
+                                </div>
+                                <p class="card-text">
+                                    <i class="bi bi-calendar"></i> 20 июля, 14:00<br>
+                                    <i class="bi bi-geo-alt"></i> Стадион "Лужники"<br>
+                                    <i class="bi bi-people"></i> 18/24 участников
+                                </p>
+                                <div class="d-flex justify-content-between">
+                                    <button class="btn btn-outline-primary">Подробнее</button>
+                                    <button class="btn btn-success">Вы участвуете</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Мероприятие 4 -->
+                    <div class="col">
+                        <div class="card h-100 event-card">
+                            <span class="category-badge badge bg-warning text-dark">1200 ₽</span>
+                            <div class="map-preview"></div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h5 class="card-title">Турнир по пляжному волейболу</h5>
+                                    <img src="volleyball.svg" class="sport-icon" alt="Волейбол">
+                                </div>
+                                <p class="card-text">
+                                    <i class="bi bi-calendar"></i> 22 июля, 11:00<br>
+                                    <i class="bi bi-geo-alt"></i> Пляж для мужчин "Серебряный бор"<br>
+                                    <i class="bi bi-people"></i> 8 участников
+                                </p>
+                                <div class="d-flex justify-content-between">
+                                    <button class="btn btn-outline-primary">Подробнее</button>
+                                    <button class="btn btn-primary">Участвовать</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Рекомендуемые сообщества -->
+                <h3 class="mt-5 mb-3">Рекомендуемые сообщества</h3>
+                <div class="row row-cols-1 row-cols-md-3 g-4">
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <img src="running-club.jpg" class="rounded-circle mb-3" width="80" height="80"
+                                    alt="Московские бегуны">
+                                <h5 class="card-title">Московские бегуны</h5>
+                                <p class="card-text">Сообщество любителей бега. Еженедельные забеги, марафонская
+                                    подготовка.</p>
+                                <button class="btn btn-outline-primary">Присоединиться</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <img src="bike-club.jpg" class="rounded-circle mb-3" width="80" height="80"
+                                    alt="Веломосква">
+                                <h5 class="card-title">Веломосква</h5>
+                                <p class="card-text">Велотуры по Подмосковью, ремонтные мастер-классы, групповые заезды.
+                                </p>
+                                <button class="btn btn-outline-primary">Присоединиться</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <img src="football-club.jpg" class="rounded-circle mb-3" width="80" height="80"
+                                    alt="Футбольная лига">
+                                <h5 class="card-title">Футбольная лига</h5>
+                                <p class="card-text">Любительские турниры, аренда полей, поиск игроков для команды.</p>
+                                <button class="btn btn-outline-primary">Присоединиться</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Футер -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5>Match Day Sync</h5>
+                    <p>Платформа для организации спортивных мероприятий и поиска единомышленников.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Контакты</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-envelope me-2"></i> contact@MatchDaySync.ru</li>
+                        <li><i class="bi bi-telephone me-2"></i> +7 (495) 123-45-67</li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Мы в соцсетях</h5>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-white fs-4"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-telegram"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-vk"></i></a>
+                    </div>
+                </div>
+            </div>
+            <hr class="bg-light">
+            <div class="text-center">
+                <small>© 2025 Match Day Sync. Все права защищены.</small>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Пример JS-логики для главной страницы
+        document.querySelectorAll('.event-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (!e.target.closest('button')) {
+                    // Переход на страницу мероприятия
+                    console.log('Переход на страницу мероприятия');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
