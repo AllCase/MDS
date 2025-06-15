@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мои мероприятия - Match Day Sync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .event-card {
+            transition: transform 0.3s;
+            border-radius: 15px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .event-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .sport-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+        .map-preview {
+            height: 150px;
+            background-color: #f8f9fa;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .category-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 2;
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 2;
+        }
+
+        .participants-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid white;
+            margin-left: -10px;
+        }
+
+        .tab-content {
+            padding-top: 20px;
+        }
+
+        .organizer-badge {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+        }
+
+        .participant-badge {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            background-color: #f8f9fa;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .empty-state i {
+            font-size: 5rem;
+            color: #dee2e6;
+            margin-bottom: 20px;
+        }
+
+        .filter-card {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Шапка -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="logo.jpg" alt="MDS" height="60">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="events.html">Мои мероприятия</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Сообщества</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
+                            data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-2 fs-4"></i>
+                            <span>Иван Петров</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="profile.html">Мой профиль</a></li>
+                            <li><a class="dropdown-item active" href="events.html">Мои мероприятия</a></li>
+                            <li><a class="dropdown-item" href="#">Настройки</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger" href="#">Выйти</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Основной контент -->
+    <div class="container py-5">
+        <!-- Заголовок и кнопки -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">Мои мероприятия</h1>
+            <div>
+                <a href="index.html" class="btn btn-outline-primary me-2">
+                    <i class="bi bi-arrow-left me-1"></i> На главную
+                </a>
+                <button class="btn btn-success">
+                    <i class="bi bi-plus-circle me-1"></i> Создать событие
+                </button>
+            </div>
+        </div>
+
+        <!-- Вкладки -->
+        <ul class="nav nav-tabs mb-4" id="eventsTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="participating-tab" data-bs-toggle="tab"
+                    data-bs-target="#participating" type="button" role="tab">
+                    <i class="bi bi-person-check me-1"></i> Участвую
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="organizing-tab" data-bs-toggle="tab" data-bs-target="#organizing"
+                    type="button" role="tab">
+                    <i class="bi bi-megaphone me-1"></i> Организую
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="past-tab" data-bs-toggle="tab" data-bs-target="#past" type="button"
+                    role="tab">
+                    <i class="bi bi-clock-history me-1"></i> Прошедшие
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="eventsTabContent">
+            <!-- Вкладка "Участвую" -->
+            <div class="tab-pane fade show active" id="participating" role="tabpanel">
+                <div class="row">
+                    <!-- Фильтры -->
+                    <div class="col-lg-3 mb-4">
+                        <div class="card filter-card">
+                            <div class="card-header bg-primary text-white">
+                                Фильтры мероприятий
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Статус</label>
+                                    <select class="form-select">
+                                        <option>Все</option>
+                                        <option selected>Предстоящие</option>
+                                        <option>Завершённые</option>
+                                        <option>Отменённые</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Дата</label>
+                                    <select class="form-select">
+                                        <option>Любая</option>
+                                        <option>Сегодня</option>
+                                        <option>Завтра</option>
+                                        <option>На этой неделе</option>
+                                        <option>В этом месяце</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Вид спорта</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="running-filter" checked>
+                                        <label class="form-check-label" for="running-filter">
+                                            🏃 Бег
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="cycling-filter" checked>
+                                        <label class="form-check-label" for="cycling-filter">
+                                            🚴 Велоспорт
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="football-filter">
+                                        <label class="form-check-label" for="football-filter">
+                                            ⚽ Футбол
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-primary w-100">Применить фильтры</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Список мероприятий -->
+                    <div class="col-lg-9">
+                        <div class="row row-cols-1 row-cols-md-2 g-4">
+                            <!-- Мероприятие 1 -->
+                            <div class="col">
+                                <div class="card h-100 event-card">
+                                    <span class="status-badge badge bg-success">Подтверждено</span>
+                                    <div class="map-preview"></div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">Вечерний забег в Парке Горького</h5>
+                                            <img src="running.svg" class="sport-icon" alt="Бег">
+                                        </div>
+                                        <p class="card-text">
+                                            <i class="bi bi-calendar"></i> Сегодня, 19:00<br>
+                                            <i class="bi bi-geo-alt"></i> Парк Горького, Москва<br>
+                                            <i class="bi bi-people"></i> 45 участников
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex">
+                                                <img src="https://via.placeholder.com/32" class="participants-avatar"
+                                                    alt="Участник">
+                                                <img src="https://via.placeholder.com/32/007bff"
+                                                    class="participants-avatar" alt="Участник">
+                                                <img src="https://via.placeholder.com/32/6610f2"
+                                                    class="participants-avatar" alt="Участник">
+                                                <span class="ms-2 text-muted">+42</span>
+                                            </div>
+                                            <button class="btn btn-outline-danger">Отменить участие</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Мероприятие 2 -->
+                            <div class="col">
+                                <div class="card h-100 event-card">
+                                    <span class="status-badge badge bg-warning text-dark">Ожидает подтверждения</span>
+                                    <div class="map-preview"></div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">Велосипедный марафон "Кольцо Москвы"</h5>
+                                            <img src="cycling.svg" class="sport-icon" alt="Велоспорт">
+                                        </div>
+                                        <p class="card-text">
+                                            <i class="bi bi-calendar"></i> 15 июля, 10:00<br>
+                                            <i class="bi bi-geo-alt"></i> Воробьевы горы<br>
+                                            <i class="bi bi-people"></i> 127 участников
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex">
+                                                <img src="https://via.placeholder.com/32" class="participants-avatar"
+                                                    alt="Участник">
+                                                <img src="https://via.placeholder.com/32/007bff"
+                                                    class="participants-avatar" alt="Участник">
+                                                <span class="ms-2 text-muted">+125</span>
+                                            </div>
+                                            <button class="btn btn-outline-secondary">Отменить заявку</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Мероприятие 3 -->
+                            <div class="col">
+                                <div class="card h-100 event-card">
+                                    <span class="status-badge badge bg-success">Подтверждено</span>
+                                    <div class="map-preview"></div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">Турнир по пляжному волейболу</h5>
+                                            <img src="volleyball.svg" class="sport-icon" alt="Волейбол">
+                                        </div>
+                                        <p class="card-text">
+                                            <i class="bi bi-calendar"></i> 22 июля, 11:00<br>
+                                            <i class="bi bi-geo-alt"></i> Пляж "Серебряный бор"<br>
+                                            <i class="bi bi-people"></i> 8 участников
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex">
+                                                <img src="https://via.placeholder.com/32" class="participants-avatar"
+                                                    alt="Участник">
+                                                <img src="https://via.placeholder.com/32/007bff"
+                                                    class="participants-avatar" alt="Участник">
+                                                <span class="ms-2 text-muted">+6</span>
+                                            </div>
+                                            <button class="btn btn-outline-danger">Отменить участие</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка "Организую" -->
+            <div class="tab-pane fade" id="organizing" role="tabpanel">
+                <div class="row">
+                    <!-- Фильтры -->
+                    <div class="col-lg-3 mb-4">
+                        <div class="card filter-card">
+                            <div class="card-header bg-info text-white">
+                                Фильтры мероприятий
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Статус</label>
+                                    <select class="form-select">
+                                        <option>Все</option>
+                                        <option selected>Активные</option>
+                                        <option>Завершённые</option>
+                                        <option>Черновики</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Дата</label>
+                                    <select class="form-select">
+                                        <option>Любая</option>
+                                        <option>Сегодня</option>
+                                        <option>Завтра</option>
+                                        <option>На этой неделе</option>
+                                        <option>В этом месяце</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Тип мероприятия</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="public-filter" checked>
+                                        <label class="form-check-label" for="public-filter">
+                                            Публичные
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="private-filter">
+                                        <label class="form-check-label" for="private-filter">
+                                            Приватные
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="paid-filter">
+                                        <label class="form-check-label" for="paid-filter">
+                                            Платные
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-info w-100 text-white">Применить фильтры</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Список мероприятий -->
+                    <div class="col-lg-9">
+                        <div class="row row-cols-1 row-cols-md-2 g-4">
+                            <!-- Мероприятие 1 -->
+                            <div class="col">
+                                <div class="card h-100 event-card">
+                                    <span class="status-badge badge organizer-badge">Организатор</span>
+                                    <span class="category-badge badge bg-danger">Бесплатно</span>
+                                    <div class="map-preview"></div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">Футбольный турнир "Летний кубок"</h5>
+                                            <img src="football.svg" class="sport-icon" alt="Футбол">
+                                        </div>
+                                        <p class="card-text">
+                                            <i class="bi bi-calendar"></i> 20 июля, 14:00<br>
+                                            <i class="bi bi-geo-alt"></i> Стадион "Лужники"<br>
+                                            <i class="bi bi-people"></i> 18/24 участников
+                                        </p>
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <span class="badge bg-light text-dark me-2">
+                                                    <i class="bi bi-eye me-1"></i> 84 просмотра
+                                                </span>
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="bi bi-person-plus me-1"></i> 5 новых заявок
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-outline-primary me-2">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Мероприятие 2 -->
+                            <div class="col">
+                                <div class="card h-100 event-card">
+                                    <span class="status-badge badge organizer-badge">Организатор</span>
+                                    <span class="category-badge badge bg-warning text-dark">500 ₽</span>
+                                    <div class="map-preview"></div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">Теннисный турнир для начинающих</h5>
+                                            <img src="tennis.svg" class="sport-icon" alt="Теннис">
+                                        </div>
+                                        <p class="card-text">
+                                            <i class="bi bi-calendar"></i> 25 июля, 12:00<br>
+                                            <i class="bi bi-geo-alt"></i> Теннисный клуб "Чемпион"<br>
+                                            <i class="bi bi-people"></i> 6/8 участников
+                                        </p>
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <span class="badge bg-light text-dark me-2">
+                                                    <i class="bi bi-eye me-1"></i> 42 просмотра
+                                                </span>
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="bi bi-currency-dollar me-1"></i> 3 оплаты
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-outline-primary me-2">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Черновик мероприятия -->
+                            <div class="col">
+                                <div class="card h-100 event-card border-warning">
+                                    <span class="status-badge badge bg-warning text-dark">Черновик</span>
+                                    <div class="map-preview bg-light"></div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">Ночной забег по набережной</h5>
+                                            <img src="running.svg" class="sport-icon" alt="Бег">
+                                        </div>
+                                        <p class="card-text text-muted">
+                                            <i class="bi bi-calendar"></i> Дата не указана<br>
+                                            <i class="bi bi-geo-alt"></i> Место не указано<br>
+                                            <i class="bi bi-people"></i> 0 участников
+                                        </p>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="badge bg-light text-dark">
+                                                <i class="bi bi-info-circle me-1"></i> Заполнено 40%
+                                            </span>
+                                            <div>
+                                                <button class="btn btn-outline-primary me-2">
+                                                    <i class="bi bi-pencil"></i> Редактировать
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка "Прошедшие" -->
+            <div class="tab-pane fade" id="past" role="tabpanel">
+                <div class="row">
+                    <!-- Фильтры -->
+                    <div class="col-lg-3 mb-4">
+                        <div class="card filter-card">
+                            <div class="card-header bg-secondary text-white">
+                                Фильтры мероприятий
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Период</label>
+                                    <select class="form-select">
+                                        <option>За всё время</option>
+                                        <option selected>За последний месяц</option>
+                                        <option>За последние 3 месяца</option>
+                                        <option>За последний год</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Роль</label>
+                                    <select class="form-select">
+                                        <option>Все</option>
+                                        <option>Участник</option>
+                                        <option>Организатор</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Рейтинг</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="rating-5">
+                                        <label class="form-check-label" for="rating-5">
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="rating-4" checked>
+                                        <label class="form-check-label" for="rating-4">
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star"></i>
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="rating-3">
+                                        <label class="form-check-label" for="rating-3">
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                            <i class="bi bi-star"></i>
+                                            <i class="bi bi-star"></i>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-secondary w-100">Применить фильтры</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Список мероприятий -->
+                    <div class="col-lg-9">
+                        <div class="row row-cols-1 row-cols-md-2 g-4">
+                            <!-- Мероприятие 1 -->
+                            <div class="col">
+                                <div class="card h-100 event-card">
+                                    <span class="status-badge badge participant-badge">Участник</span>
+                                    <div class="map-preview"></div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">Летний велопробег 2025</h5>
+                                            <img src="cycling.svg" class="sport-icon" alt="Велоспорт">
+                                        </div>
+                                        <p class="card-text">
+                                            <i class="bi bi-calendar"></i> 12 июня, 10:00<br>
+                                            <i class="bi bi-geo-alt"></i> Парк Сокольники<br>
+                                            <i class="bi bi-people"></i> 58 участников
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-2">Ваш результат:</span>
+                                                <span class="badge bg-success">2 место</span>
+                                            </div>
+                                            <div class="text-warning">
+                                                <i class="bi bi-star-fill"></i>
+                                                <i class="bi bi-star-fill"></i>
+                                                <i class="bi bi-star-fill"></i>
+                                                <i class="bi bi-star-fill"></i>
+                                                <i class="bi bi-star-half"></i>
+                                                <span class="ms-1">4.5</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Мероприятие 2 -->
+                            <div class="col">
+                                <div class="card h-100 event-card">
+                                    <span class="status-badge badge organizer-badge">Организатор</span>
+                                    <div class="map-preview"></div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <h5 class="card-title">Турнир по волейболу "Весна 2025"</h5>
+                                            <img src="volleyball.svg" class="sport-icon" alt="Волейбол">
+                                        </div>
+                                        <p class="card-text">
+                                            <i class="bi bi-calendar"></i> 15 мая, 14:00<br>
+                                            <i class="bi bi-geo-alt"></i> Спорткомплекс "Олимпийский"<br>
+                                            <i class="bi bi-people"></i> 32 участника
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="badge bg-light text-dark me-2">
+                                                    <i class="bi bi-cash-coin me-1"></i> Собрано: 12,400 ₽
+                                                </span>
+                                            </div>
+                                            <div class="text-warning">
+                                                <i class="bi bi-star-fill"></i>
+                                                <i class="bi bi-star-fill"></i>
+                                                <i class="bi bi-star-fill"></i>
+                                                <i class="bi bi-star-fill"></i>
+                                                <i class="bi bi-star"></i>
+                                                <span class="ms-1">4.2</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Футер -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5>Match Day Sync</h5>
+                    <p>Платформа для организации спортивных мероприятий и поиска единомышленников.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Контакты</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-envelope me-2"></i> contact@MatchDaySync.ru</li>
+                        <li><i class="bi bi-telephone me-2"></i> +7 (495) 123-45-67</li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Мы в соцсетях</h5>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-white fs-4"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-telegram"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-vk"></i></a>
+                    </div>
+                </div>
+            </div>
+            <hr class="bg-light">
+            <div class="text-center">
+                <small>© 2025 Match Day Sync. Все права защищены.</small>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Инициализация вкладок
+        const triggerTabList = document.querySelectorAll('#eventsTab button');
+        triggerTabList.forEach(triggerEl => {
+            const tabTrigger = new bootstrap.Tab(triggerEl);
+
+            triggerEl.addEventListener('click', event => {
+                event.preventDefault();
+                tabTrigger.show();
+            });
+        });
+
+        // Фильтрация мероприятий
+        document.querySelectorAll('.form-check-input').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                console.log('Фильтр изменён:', this.id);
+                // Здесь будет логика фильтрации
+            });
+        });
+
+        // Обработка кнопок участия
+        document.querySelectorAll('.btn-outline-danger').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const eventName = this.closest('.event-card').querySelector('.card-title').textContent;
+                if (confirm(`Вы уверены, что хотите отменить участие в мероприятии "${eventName}"?`)) {
+                    this.closest('.col').style.opacity = '0.5';
+                    setTimeout(() => {
+                        this.closest('.col').remove();
+                        if (document.querySelectorAll('#participating .col').length === 0) {
+                            showEmptyState('participating', 'Участие');
+                        }
+                    }, 500);
+                }
+            });
+        });
+
+        // Показать состояние пустого списка
+        function showEmptyState(tabId, type) {
+            const tabContent = document.querySelector(`#${tabId}`);
+            const emptyStateHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x"></i>
+                    <h4>Нет мероприятий</h4>
+                    <p class="text-muted">У вас нет ${type === 'Участие' ? 'предстоящих мероприятий' : 'активных мероприятий, которые вы организуете'}.</p>
+                    <a href="index.html" class="btn btn-primary mt-3">
+                        <i class="bi bi-search me-1"></i> Найти мероприятия
+                    </a>
+                </div>
+            `;
+            tabContent.querySelector('.row').innerHTML = emptyStateHTML;
+        }
+    </script>
+</body>
+
+</html>

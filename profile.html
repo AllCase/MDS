@@ -8,7 +8,124 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        /* ... существующие стили ... */
+        .profile-header {
+            background: linear-gradient(120deg, #1a2a6c, #b21f1f, #1a2a6c);
+            background-size: 200% 200%;
+            animation: gradientBG 15s ease infinite;
+            padding-top: 100px;
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border: 5px solid white;
+            margin-top: -75px;
+            z-index: 2;
+            position: relative;
+        }
+
+        .stats-card {
+            transition: all 0.3s;
+            border-radius: 15px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .progress {
+            height: 10px;
+            border-radius: 5px;
+        }
+
+        .badge-sport {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 500;
+            margin-right: 8px;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+
+        .event-timeline {
+            position: relative;
+            padding-left: 30px;
+            border-left: 2px solid #dee2e6;
+            margin-left: 15px;
+        }
+
+        .event-timeline::before {
+            content: "";
+            position: absolute;
+            left: -8px;
+            top: 0;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #0d6efd;
+        }
+
+        .nav-pills .nav-link {
+            border-radius: 20px;
+            padding: 10px 20px;
+            margin-bottom: 10px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .nav-pills .nav-link.active {
+            background: linear-gradient(120deg, #1a2a6c, #b21f1f);
+            color: white;
+            box-shadow: 0 4px 10px rgba(26, 42, 108, 0.25);
+        }
+
+        .achievement-badge {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            margin: 0 auto 15px;
+            font-size: 30px;
+        }
+
+        .edit-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            z-index: 3;
+        }
 
         .back-to-home {
             position: absolute;
@@ -42,10 +159,10 @@
                         <a class="nav-link" href="index.html">Главная</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Календарь</a>
+                        <a class="nav-link" href="events.html">Мои мероприятия</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Сообщества</a>
+                        <a class="nav-link" href="communities.html">Сообщества</a>
                     </li>
                 </ul>
                 <div class="d-flex align-items-center">
@@ -56,13 +173,13 @@
                             <span>Иван Петров</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item active" href="profile.html">Мой профиль</a></li>
-                            <li><a class="dropdown-item" href="#">Мои мероприятия</a></li>
-                            <li><a class="dropdown-item" href="#">Настройки</a></li>
+                            <li><a class="dropdown-item" href="profile.html">Мой профиль</a></li>
+                            <li><a class="dropdown-item" href="my_events.html">Мои мероприятия</a></li>
+                            <li><a class="dropdown-item" href="settings.html">Настройки</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item text-danger" href="#">Выйти</a></li>
+                            <li><a class="dropdown-item text-danger" href="logout.html">Выйти</a></li>
                         </ul>
                     </div>
                 </div>
@@ -72,16 +189,10 @@
 
     <!-- Шапка профиля -->
     <div class="profile-header text-center text-white pb-5 position-relative">
-        <!-- Кнопка "На главную" в шапке профиля -->
-        <a href="index.html" class="btn btn-light back-to-home">
-            <i class="bi bi-arrow-left me-1"></i> На главную
-        </a>
-
         <div class="container">
             <div class="d-flex justify-content-center">
                 <div class="position-relative">
-                    <img src="https://via.placeholder.com/150" class="profile-avatar rounded-circle shadow"
-                        alt="Аватар">
+                    <img src="Person.svg" class="profile-avatar rounded-circle shadow" alt="Аватар">
                     <div class="edit-icon">
                         <i class="bi bi-pencil"></i>
                     </div>
@@ -89,23 +200,6 @@
             </div>
             <h1 class="mt-3 mb-0">Иван Петров</h1>
             <p class="fs-5 text-light mb-4">Москва, Россия</p>
-
-            <div class="d-flex justify-content-center gap-3">
-                <div>
-                    <h4 class="mb-0">28</h4>
-                    <p class="mb-0">Мероприятий</p>
-                </div>
-                <div class="vr"></div>
-                <div>
-                    <h4 class="mb-0">12</h4>
-                    <p class="mb-0">Друзей</p>
-                </div>
-                <div class="vr"></div>
-                <div>
-                    <h4 class="mb-0">5</h4>
-                    <p class="mb-0">Сообществ</p>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -126,14 +220,8 @@
                                 <a class="nav-link active" href="#"><i class="bi bi-person me-2"></i> Обзор профиля</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="#"><i class="bi bi-calendar-event me-2"></i> Мои
+                                <a class="nav-link" href="my_events.html"><i class="bi bi-calendar-event me-2"></i> Мои
                                     мероприятия</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#"><i class="bi bi-people me-2"></i> Мои сообщества</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#"><i class="bi bi-trophy me-2"></i> Достижения</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="#"><i class="bi bi-gear me-2"></i> Настройки</a>
@@ -155,41 +243,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="card shadow-sm mt-4">
-                    <div class="card-header bg-info text-white">
-                        Моя статистика
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <p class="mb-1 d-flex justify-content-between">
-                                <span>Активность</span>
-                                <span>85%</span>
-                            </p>
-                            <div class="progress">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: 85%"></div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <p class="mb-1 d-flex justify-content-between">
-                                <span>Посещаемость</span>
-                                <span>92%</span>
-                            </p>
-                            <div class="progress">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: 92%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="mb-1 d-flex justify-content-between">
-                                <span>Организация</span>
-                                <span>68%</span>
-                            </p>
-                            <div class="progress">
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: 68%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- Правая колонка - контент -->
@@ -199,31 +252,6 @@
                     <a href="index.html" class="btn btn-outline-primary">
                         <i class="bi bi-arrow-left me-1"></i> На главную
                     </a>
-                </div>
-
-                <!-- Карточки статистики -->
-                <div class="row mb-4">
-                    <div class="col-md-4 mb-3">
-                        <div class="stats-card card text-center py-4 bg-light">
-                            <i class="bi bi-trophy fs-1 text-warning mb-3"></i>
-                            <h3 class="mb-0">12</h3>
-                            <p class="mb-0">Достижений</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <div class="stats-card card text-center py-4 bg-light">
-                            <i class="bi bi-calendar-check fs-1 text-primary mb-3"></i>
-                            <h3 class="mb-0">7</h3>
-                            <p class="mb-0">Предстоящих</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <div class="stats-card card text-center py-4 bg-light">
-                            <i class="bi bi-award fs-1 text-success mb-3"></i>
-                            <h3 class="mb-0">3</h3>
-                            <p class="mb-0">Побед</p>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Обо мне -->
@@ -301,54 +329,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Достижения -->
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Мои достижения</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3 mb-4 text-center">
-                                <div class="achievement-badge">
-                                    <i class="bi bi-trophy"></i>
-                                </div>
-                                <h6 class="mb-1">Первое мероприятие</h6>
-                                <p class="small text-muted mb-0">Завершено 5 мероприятий</p>
-                            </div>
-
-                            <div class="col-md-3 mb-4 text-center">
-                                <div class="achievement-badge">
-                                    <i class="bi bi-lightning"></i>
-                                </div>
-                                <h6 class="mb-1">Активный участник</h6>
-                                <p class="small text-muted mb-0">10+ мероприятий</p>
-                            </div>
-
-                            <div class="col-md-3 mb-4 text-center">
-                                <div class="achievement-badge">
-                                    <i class="bi bi-star"></i>
-                                </div>
-                                <h6 class="mb-1">Звезда сообщества</h6>
-                                <p class="small text-muted mb-0">Активность в 3+ сообществах</p>
-                            </div>
-
-                            <div class="col-md-3 mb-4 text-center">
-                                <div class="achievement-badge">
-                                    <i class="bi bi-heart"></i>
-                                </div>
-                                <h6 class="mb-1">Преданный спортсмен</h6>
-                                <p class="small text-muted mb-0">1 год активности</p>
-                            </div>
-                        </div>
-
-                        <div class="text-center mt-2">
-                            <button class="btn btn-outline-primary">
-                                <i class="bi bi-award me-1"></i> Все достижения
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -371,8 +351,6 @@
                 <div class="col-md-4 mb-3">
                     <h5>Мы в соцсетях</h5>
                     <div class="d-flex gap-3">
-                        <a href="#" class="text-white fs-4"><i class="bi bi-facebook"></i></a>
-                        <a href="#" class="text-white fs-4"><i class="bi bi-instagram"></i></a>
                         <a href="#" class="text-white fs-4"><i class="bi bi-telegram"></i></a>
                         <a href="#" class="text-white fs-4"><i class="bi bi-vk"></i></a>
                     </div>
