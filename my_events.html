@@ -84,6 +84,21 @@
 
         .filter-card {
             margin-bottom: 20px;
+            margin-top: 20px;
+        }
+
+        .nav-pills .nav-link.active {
+            background: linear-gradient(120deg, #1a2a6c, #b21f1f);
+            color: white;
+            box-shadow: 0 4px 10px rgba(26, 42, 108, 0.25);
+        }
+
+        .nav-pills .nav-link {
+            border-radius: 20px;
+            padding: 10px 20px;
+            margin-bottom: 10px;
+            color: #495057;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -168,13 +183,40 @@
                 </button>
             </li>
         </ul>
-
         <div class="tab-content" id="eventsTabContent">
             <!-- Вкладка "Участвую" -->
             <div class="tab-pane fade show active" id="participating" role="tabpanel">
                 <div class="row">
                     <!-- Фильтры -->
                     <div class="col-lg-3 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <!-- Кнопка "На главную" в боковом меню -->
+                                <a href="index.html" class="btn btn-outline-primary mb-3 w-100">
+                                    <i class="bi bi-house-door me-1"></i> На главную
+                                </a>
+
+                                <ul class="nav nav-pills flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="profile.html"><i class="bi bi-person me-2"></i> Обзор
+                                            профиля</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link active" href="my_events.html"><i
+                                                class="bi bi-calendar-event me-2"></i> Мои
+                                            мероприятия</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#"><i class="bi bi-gear me-2"></i> Настройки</a>
+                                    </li>
+                                    <li class="nav-item mt-3">
+                                        <a class="nav-link text-danger" href="#"><i
+                                                class="bi bi-box-arrow-right me-2"></i>
+                                            Выйти</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                         <div class="card filter-card">
                             <div class="card-header bg-primary text-white">
                                 Фильтры мероприятий
@@ -329,6 +371,34 @@
                 <div class="row">
                     <!-- Фильтры -->
                     <div class="col-lg-3 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <!-- Кнопка "На главную" в боковом меню -->
+                                <a href="index.html" class="btn btn-outline-primary mb-3 w-100">
+                                    <i class="bi bi-house-door me-1"></i> На главную
+                                </a>
+
+                                <ul class="nav nav-pills flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="profile.html"><i class="bi bi-person me-2"></i> Обзор
+                                            профиля</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link active" href="my_events.html"><i
+                                                class="bi bi-calendar-event me-2"></i> Мои
+                                            мероприятия</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#"><i class="bi bi-gear me-2"></i> Настройки</a>
+                                    </li>
+                                    <li class="nav-item mt-3">
+                                        <a class="nav-link text-danger" href="#"><i
+                                                class="bi bi-box-arrow-right me-2"></i>
+                                            Выйти</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                         <div class="card filter-card">
                             <div class="card-header bg-info text-white">
                                 Фильтры мероприятий
@@ -499,6 +569,34 @@
                 <div class="row">
                     <!-- Фильтры -->
                     <div class="col-lg-3 mb-4">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <!-- Кнопка "На главную" в боковом меню -->
+                                <a href="index.html" class="btn btn-outline-primary mb-3 w-100">
+                                    <i class="bi bi-house-door me-1"></i> На главную
+                                </a>
+
+                                <ul class="nav nav-pills flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="profile.html"><i class="bi bi-person me-2"></i> Обзор
+                                            профиля</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link active" href="my_events.html"><i
+                                                class="bi bi-calendar-event me-2"></i> Мои
+                                            мероприятия</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#"><i class="bi bi-gear me-2"></i> Настройки</a>
+                                    </li>
+                                    <li class="nav-item mt-3">
+                                        <a class="nav-link text-danger" href="#"><i
+                                                class="bi bi-box-arrow-right me-2"></i>
+                                            Выйти</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                         <div class="card filter-card">
                             <div class="card-header bg-secondary text-white">
                                 Фильтры мероприятий
