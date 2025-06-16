@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,13 +17,21 @@
             animation: gradientBG 15s ease infinite;
             padding: 20px;
         }
-        
+
         @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
-        
+
         .auth-card {
             border-radius: 20px;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
@@ -31,13 +40,13 @@
             width: 100%;
             margin: 0 auto;
         }
-        
+
         .auth-header {
             background: rgba(255, 255, 255, 0.95);
             padding: 30px 30px 20px;
             text-align: center;
         }
-        
+
         .auth-logo {
             width: 100px;
             height: 100px;
@@ -50,12 +59,12 @@
             color: white;
             font-size: 40px;
         }
-        
+
         .auth-body {
             background: white;
             padding: 30px;
         }
-        
+
         .social-btn {
             display: flex;
             align-items: center;
@@ -66,47 +75,47 @@
             font-weight: 500;
             transition: all 0.3s;
         }
-        
+
         .social-btn:hover {
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
-        
+
         .social-btn i {
             font-size: 1.4rem;
             margin-right: 10px;
         }
-        
+
         .divider {
             display: flex;
             align-items: center;
             margin: 25px 0;
         }
-        
+
         .divider::before,
         .divider::after {
             content: '';
             flex: 1;
             border-bottom: 1px solid #dee2e6;
         }
-        
+
         .divider span {
             padding: 0 15px;
             color: #6c757d;
         }
-        
+
         .form-control:focus {
             box-shadow: 0 0 0 0.25rem rgba(17, 153, 142, 0.25);
             border-color: #11998e;
         }
-        
+
         .auth-footer {
             background: rgba(255, 255, 255, 0.95);
             padding: 20px;
             text-align: center;
             font-size: 0.9rem;
         }
-        
+
         .password-toggle {
             position: absolute;
             right: 10px;
@@ -115,16 +124,16 @@
             cursor: pointer;
             color: #6c757d;
         }
-        
+
         .password-container {
             position: relative;
         }
-        
+
         .progress {
             height: 8px;
             margin-top: 5px;
         }
-        
+
         .password-strength-text {
             font-size: 0.85rem;
             margin-top: 5px;
@@ -132,6 +141,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="auth-container">
         <div class="auth-card">
@@ -142,8 +152,8 @@
                 <h2>Создать аккаунт</h2>
                 <p class="text-muted">Присоединяйтесь к спортивному сообществу</p>
             </div>
-            
-            <div class="auth-body">  
+
+            <div class="auth-body">
                 <!-- Форма регистрации -->
                 <form id="registerForm">
                     <div class="row">
@@ -156,46 +166,49 @@
                             <input type="text" class="form-control" id="lastName" placeholder="Ваша фамилия" required>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="regEmail" class="form-label">Email</label>
                         <input type="email" class="form-control" id="regEmail" placeholder="ваш@email.com" required>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="regPassword" class="form-label">Пароль</label>
                         <div class="password-container">
-                            <input type="password" class="form-control" id="regPassword" placeholder="Создайте пароль" required>
+                            <input type="password" class="form-control" id="regPassword" placeholder="Создайте пароль"
+                                required>
                             <span class="password-toggle" id="regPasswordToggle">
                                 <i class="bi bi-eye"></i>
                             </span>
                         </div>
                         <div class="progress">
-                            <div class="progress-bar" id="passwordStrengthBar" role="progressbar" style="width: 0%"></div>
+                            <div class="progress-bar" id="passwordStrengthBar" role="progressbar" style="width: 0%">
+                            </div>
                         </div>
                         <div class="password-strength-text" id="passwordStrengthText">Слабый пароль</div>
                     </div>
-                    
+
                     <div class="mb-4">
                         <label for="confirmPassword" class="form-label">Подтвердите пароль</label>
                         <div class="password-container">
-                            <input type="password" class="form-control" id="confirmPassword" placeholder="Повторите пароль" required>
+                            <input type="password" class="form-control" id="confirmPassword"
+                                placeholder="Повторите пароль" required>
                             <span class="password-toggle" id="confirmPasswordToggle">
                                 <i class="bi bi-eye"></i>
                             </span>
                         </div>
                         <div class="invalid-feedback" id="passwordMatchError">Пароли не совпадают</div>
-                    </div>                    
+                    </div>
                     <div class="d-grid mb-3">
                         <button type="submit" class="btn btn-success btn-lg">Создать аккаунт</button>
                     </div>
-                    
+
                     <div class="text-center">
                         <p>Уже есть аккаунт? <a href="aut.html">Войти</a></p>
                     </div>
                 </form>
             </div>
-            
+
             <div class="auth-footer">
                 <p class="mb-0">© 2025 Match Day Sync. Все права защищены.<br>
             </div>
@@ -208,10 +221,10 @@
         function setupPasswordToggle(inputId, toggleId) {
             const toggle = document.getElementById(toggleId);
             const input = document.getElementById(inputId);
-            
-            toggle.addEventListener('click', function() {
+
+            toggle.addEventListener('click', function () {
                 const icon = this.querySelector('i');
-                
+
                 if (input.type === 'password') {
                     input.type = 'text';
                     icon.classList.remove('bi-eye');
@@ -223,33 +236,33 @@
                 }
             });
         }
-        
+
         // Инициализация переключателей
         setupPasswordToggle('regPassword', 'regPasswordToggle');
         setupPasswordToggle('confirmPassword', 'confirmPasswordToggle');
-        
+
         // Проверка сложности пароля
-        document.getElementById('regPassword').addEventListener('input', function() {
+        document.getElementById('regPassword').addEventListener('input', function () {
             const password = this.value;
             const strengthBar = document.getElementById('passwordStrengthBar');
             const strengthText = document.getElementById('passwordStrengthText');
-            
+
             let strength = 0;
             let text = '';
             let color = '';
-            
+
             // Проверка длины
             if (password.length >= 8) strength += 25;
-            
+
             // Проверка наличия символов в разных регистрах
             if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 25;
-            
+
             // Проверка наличия цифр
             if (/\d/.test(password)) strength += 25;
-            
+
             // Проверка наличия спецсимволов
             if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 25;
-            
+
             // Определение сложности
             if (strength < 50) {
                 text = 'Слабый пароль';
@@ -261,20 +274,20 @@
                 text = 'Надёжный пароль';
                 color = 'bg-success';
             }
-            
+
             // Обновление UI
             strengthBar.style.width = strength + '%';
             strengthBar.className = 'progress-bar ' + color;
             strengthText.textContent = text;
             strengthText.className = 'password-strength-text ' + color.replace('bg-', 'text-');
         });
-        
+
         // Проверка совпадения паролей
         function checkPasswordMatch() {
             const password = document.getElementById('regPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const errorElement = document.getElementById('passwordMatchError');
-            
+
             if (password && confirmPassword && password !== confirmPassword) {
                 document.getElementById('confirmPassword').classList.add('is-invalid');
                 errorElement.style.display = 'block';
@@ -285,29 +298,30 @@
                 return true;
             }
         }
-        
+
         document.getElementById('regPassword').addEventListener('input', checkPasswordMatch);
         document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
-        
+
         // Обработка формы регистрации
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
+        document.getElementById('registerForm').addEventListener('submit', function (e) {
             e.preventDefault();
-            
+
             if (!checkPasswordMatch()) {
                 return;
             }
-            
+
             const firstName = document.getElementById('firstName').value;
             const lastName = document.getElementById('lastName').value;
             const email = document.getElementById('regEmail').value;
             const password = document.getElementById('regPassword').value;
-            
+
             // Здесь будет запрос к серверу
             console.log('Регистрация:', { firstName, lastName, email, password });
-            
+
             // Перенаправление после успешной регистрации
             window.location.href = 'profile-setup.html';
         });
     </script>
 </body>
+
 </html>
