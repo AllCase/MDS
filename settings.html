@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки - Match Day Sync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .settings-header {
+            background: linear-gradient(120deg, #1a2a6c, #b21f1f, #1a2a6c);
+            background-size: 200% 200%;
+            padding: 80px 0 40px;
+            color: white;
+            position: relative;
+        }
+
+        .settings-card {
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+            border: none;
+        }
+
+        .settings-card .card-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            background-color: #f8f9fa;
+            font-weight: 600;
+            padding: 15px 20px;
+        }
+
+        .settings-card .card-body {
+            padding: 20px;
+        }
+
+        .nav-settings .nav-link {
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+
+        .nav-settings .nav-link i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .nav-settings .nav-link:hover,
+        .nav-settings .nav-link.active {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f);
+            color: white;
+            box-shadow: 0 4px 10px rgba(26, 42, 108, 0.25);
+        }
+
+        .section-title {
+            position: relative;
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+
+        .avatar-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 20px;
+        }
+
+        .avatar-edit {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+        }
+
+        .avatar-preview {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.toggle-slider {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f);
+        }
+
+        input:checked+.toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .security-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background-color: #e6f7ee;
+            color: #198754;
+            font-size: 0.9rem;
+        }
+
+        .connected-app {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .connected-app:hover {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+
+        .app-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background-color: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.2rem;
+        }
+
+        .danger-zone {
+            border: 2px dashed #dc3545;
+            border-radius: 15px;
+            padding: 20px;
+            background-color: #fff8f8;
+        }
+
+        .password-meter {
+            height: 5px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .password-meter-bar {
+            height: 100%;
+            width: 0;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Шапка -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="logo.jpg" alt="MDS" height="60">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="my_events.html">Мои мероприятия</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Календарь</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
+                            data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-2 fs-4"></i>
+                            <span>Иван Петров</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="profile.html">Мой профиль</a></li>
+                            <li><a class="dropdown-item" href="events.html">Мои мероприятия</a></li>
+                            <li><a class="dropdown-item active" href="settings.html">Настройки</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger" href="#">Выйти</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Шапка настроек -->
+    <div class="settings-header text-center">
+        <div class="container">
+            <h1 class="mb-3">Настройки аккаунта</h1>
+            <p class="lead mb-0">Управляйте вашим профилем и параметрами системы</p>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="container py-5">
+        <div class="row">
+            <!-- Боковое меню -->
+            <div class="col-lg-3 mb-4">
+                <div class="card settings-card">
+                    <div class="card-body p-3">
+                        <ul class="nav flex-column nav-settings">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#profile" data-bs-toggle="tab">
+                                    <i class="bi bi-person"></i> Профиль
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#account" data-bs-toggle="tab">
+                                    <i class="bi bi-shield-lock"></i> Безопасность
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#notifications" data-bs-toggle="tab">
+                                    <i class="bi bi-bell"></i> Уведомления
+                                </a>
+                            </li>
+                            <li class="nav-item mt-3">
+                                <a class="nav-link text-danger" href="#danger" data-bs-toggle="tab">
+                                    <i class="bi bi-exclamation-triangle"></i> Опасная зона
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Основное содержимое -->
+            <div class="col-lg-9">
+                <div class="tab-content">
+                    <!-- Вкладка Профиль -->
+                    <div class="tab-pane fade show active" id="profile">
+                        <div class="card settings-card">
+                            <div class="card-header">Личная информация</div>
+                            <div class="card-body">
+                                <div class="text-center mb-4">
+                                    <div class="avatar-container">
+                                        <img src="https://via.placeholder.com/150" class="avatar-preview" alt="Аватар">
+                                        <div class="avatar-edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </div>
+                                    </div>
+                                    <input type="file" id="avatarUpload" class="d-none" accept="image/*">
+                                </div>
+
+                                <form>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Имя</label>
+                                            <input type="text" class="form-control" value="Иван">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Фамилия</label>
+                                            <input type="text" class="form-control" value="Петров">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-control" value="ivan.petrov@example.com">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Телефон</label>
+                                        <input type="tel" class="form-control" value="+7 (999) 123-45-67">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Дата рождения</label>
+                                        <input type="date" class="form-control" value="1990-03-15">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Город</label>
+                                        <input type="text" class="form-control" value="Москва">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">О себе</label>
+                                        <textarea class="form-control"
+                                            rows="3">Активный участник спортивных мероприятий. Люблю бег и велоспорт.</textarea>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="card settings-card">
+                            <div class="card-header">Спортивные предпочтения</div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Любимые виды спорта</label>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="sport-running" checked>
+                                            <label class="form-check-label" for="sport-running">🏃 Бег</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="sport-cycling" checked>
+                                            <label class="form-check-label" for="sport-cycling">🚴 Велоспорт</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="sport-football">
+                                            <label class="form-check-label" for="sport-football">⚽ Футбол</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="sport-basketball">
+                                            <label class="form-check-label" for="sport-basketball">🏀 Баскетбол</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="sport-tennis">
+                                            <label class="form-check-label" for="sport-tennis">🎾 Теннис</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="sport-swimming">
+                                            <label class="form-check-label" for="sport-swimming">🏊 Плавание</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="sport-yoga">
+                                            <label class="form-check-label" for="sport-yoga">🧘 Йога</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Уровень подготовки</label>
+                                    <select class="form-select">
+                                        <option>Начинающий</option>
+                                        <option selected>Любитель</option>
+                                        <option>Продвинутый</option>
+                                        <option>Профессионал</option>
+                                    </select>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">Сохранить предпочтения</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка Безопасность -->
+                    <div class="tab-pane fade" id="account">
+                        <div class="card settings-card">
+                            <div class="card-header">Безопасность аккаунта</div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <div>
+                                        <h5>Статус аккаунта</h5>
+                                        <span class="security-badge">
+                                            <i class="bi bi-shield-check me-2"></i> Аккаунт защищен
+                                        </span>
+                                    </div>
+                                    <button class="btn btn-outline-primary">
+                                        Проверить безопасность
+                                    </button>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h5 class="section-title">Смена пароля</h5>
+                                    <form>
+                                        <div class="mb-3">
+                                            <label class="form-label">Текущий пароль</label>
+                                            <input type="password" class="form-control"
+                                                placeholder="Введите текущий пароль">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Новый пароль</label>
+                                            <input type="password" class="form-control" id="newPassword"
+                                                placeholder="Придумайте новый пароль">
+                                            <div class="password-meter">
+                                                <div class="password-meter-bar" id="passwordStrength"></div>
+                                            </div>
+                                            <div class="form-text">Используйте не менее 8 символов, включая цифры и
+                                                буквы</div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Подтвердите пароль</label>
+                                            <input type="password" class="form-control"
+                                                placeholder="Повторите новый пароль">
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary">Сменить пароль</button>
+                                    </form>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h5 class="section-title">Двухфакторная аутентификация</h5>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p class="mb-1">Двухфакторная аутентификация отключена</p>
+                                            <p class="text-muted small mb-0">Добавьте дополнительный уровень
+                                                безопасности к аккаунту</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h5 class="section-title">Активные сессии</h5>
+                                    <div class="table-responsive">
+                                        <table class="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Устройство</th>
+                                                    <th>Местоположение</th>
+                                                    <th>Последняя активность</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>
+                                                        <i class="bi bi-laptop me-2"></i> Windows Chrome
+                                                    </td>
+                                                    <td>Москва, Россия</td>
+                                                    <td>Сегодня, 14:30</td>
+                                                    <td class="text-end">
+                                                        <button class="btn btn-sm btn-outline-danger">Завершить</button>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        <i class="bi bi-phone me-2"></i> iPhone Safari
+                                                    </td>
+                                                    <td>Санкт-Петербург, Россия</td>
+                                                    <td>Вчера, 18:45</td>
+                                                    <td class="text-end">
+                                                        <button class="btn btn-sm btn-outline-danger">Завершить</button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка Уведомления -->
+                    <div class="tab-pane fade" id="notifications">
+                        <div class="card settings-card">
+                            <div class="card-header">Настройки уведомлений</div>
+                            <div class="card-body">
+                                <h5 class="section-title">Общие настройки</h5>
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <p class="mb-0">Email уведомления</p>
+                                            <p class="text-muted small mb-0">Получать важные уведомления по email</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <p class="mb-0">Push уведомления</p>
+                                            <p class="text-muted small mb-0">Получать уведомления в реальном времени</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p class="mb-0">SMS уведомления</p>
+                                            <p class="text-muted small mb-0">Получать важные уведомления по SMS</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <h5 class="section-title">Типы уведомлений</h5>
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <p class="mb-0">Участие в мероприятиях</p>
+                                            <p class="text-muted small mb-0">Напоминания о предстоящих мероприятиях</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <p class="mb-0">Новые сообщения</p>
+                                            <p class="text-muted small mb-0">Уведомления о личных сообщениях</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <p class="mb-0">Обновления мероприятий</p>
+                                            <p class="text-muted small mb-0">Изменения в мероприятиях, где вы участвуете
+                                            </p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox" checked>
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p class="mb-0">Рекомендации и новости</p>
+                                            <p class="text-muted small mb-0">Персональные рекомендации и обновления
+                                                платформы</p>
+                                        </div>
+                                        <label class="toggle-switch">
+                                            <input type="checkbox">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <h5 class="section-title">Расписание уведомлений</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Начало уведомлений</label>
+                                            <input type="time" class="form-control" value="08:00">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Конец уведомлений</label>
+                                            <input type="time" class="form-control" value="22:00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка Опасная зона -->
+                    <div class="tab-pane fade" id="danger">
+                        <div class="card settings-card">
+                            <div class="card-header">Опасная зона</div>
+                            <div class="card-body">
+                                <div class="danger-zone mb-4">
+                                    <h5 class="text-danger mb-3">Удалить аккаунт</h5>
+                                    <p class="mb-3">Удаление вашего аккаунта приведет к безвозвратной потере всех
+                                        данных: мероприятий, сообществ, достижений.</p>
+                                    <button class="btn btn-outline-danger" data-bs-toggle="modal"
+                                        data-bs-target="#deleteAccountModal">
+                                        Удалить аккаунт
+                                    </button>
+                                </div>
+
+                                <div class="danger-zone">
+                                    <h5 class="text-danger mb-3">Экспорт данных</h5>
+                                    <p class="mb-3">Запросите архив со всеми вашими данными на платформе. Архив будет
+                                        доступен для скачивания в течение 7 дней.</p>
+                                    <button class="btn btn-outline-secondary">
+                                        <i class="bi bi-download me-1"></i> Запросить данные
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно удаления аккаунта -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Удаление аккаунта</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-danger fw-bold">Это действие невозможно отменить!</p>
+                    <p>Все ваши данные будут безвозвратно удалены:</p>
+                    <ul>
+                        <li>Профиль и настройки</li>
+                        <li>История мероприятий</li>
+                        <li>Достижения и статистика</li>
+                        <li>Сообщества и связи</li>
+                    </ul>
+                    <div class="mb-3">
+                        <label class="form-label">Введите ваш пароль для подтверждения</label>
+                        <input type="password" class="form-control" placeholder="Ваш пароль">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger">Удалить аккаунт</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Футер -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5>Match Day Sync</h5>
+                    <p>Платформа для организации спортивных мероприятий и поиска единомышленников.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Контакты</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-envelope me-2"></i> contact@MatchDaySync.ru</li>
+                        <li><i class="bi bi-telephone me-2"></i> +7 (495) 123-45-67</li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Мы в соцсетях</h5>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-white fs-4"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-telegram"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-vk"></i></a>
+                    </div>
+                </div>
+            </div>
+            <hr class="bg-light">
+            <div class="text-center">
+                <small>© 2025 Match Day Sync. Все права защищены.</small>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Загрузка аватара
+            const avatarUpload = document.getElementById('avatarUpload');
+            const avatarPreview = document.querySelector('.avatar-preview');
+            const avatarEdit = document.querySelector('.avatar-edit');
+
+            avatarEdit.addEventListener('click', function () {
+                avatarUpload.click();
+            });
+
+            avatarUpload.addEventListener('change', function (e) {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        avatarPreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+
+            // Индикатор сложности пароля
+            const passwordInput = document.getElementById('newPassword');
+            const passwordStrength = document.getElementById('passwordStrength');
+
+            passwordInput.addEventListener('input', function () {
+                const password = this.value;
+                let strength = 0;
+
+                if (password.length >= 8) strength += 25;
+                if (/[A-Z]/.test(password)) strength += 25;
+                if (/[0-9]/.test(password)) strength += 25;
+                if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+
+                passwordStrength.style.width = strength + '%';
+
+                if (strength < 50) {
+                    passwordStrength.style.backgroundColor = '#dc3545';
+                } else if (strength < 75) {
+                    passwordStrength.style.backgroundColor = '#ffc107';
+                } else {
+                    passwordStrength.style.backgroundColor = '#198754';
+                }
+            });
+
+            // Переключение вкладок
+            document.querySelectorAll('.nav-settings .nav-link').forEach(link => {
+                link.addEventListener('click', function () {
+                    document.querySelectorAll('.nav-settings .nav-link').forEach(l => {
+                        l.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+
+            // Обработка переключения двухфакторной аутентификации
+            document.querySelectorAll('.toggle-switch input').forEach(switchEl => {
+                switchEl.addEventListener('change', function () {
+                    if (this.checked) {
+                        alert('Для включения двухфакторной аутентификации следуйте инструкциям в нашем приложении');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
