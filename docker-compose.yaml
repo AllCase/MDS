@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:15-alpine  
+    container_name: BD2
+    environment:
+      POSTGRES_DB: matchday
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: securepassword123  
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d matchday"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
