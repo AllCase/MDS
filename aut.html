@@ -128,6 +128,22 @@
         .password-container {
             position: relative;
         }
+
+        /* Добавлены стили для сообщений об ошибках и индикатора загрузки */
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            text-align: center;
+            min-height: 1.5rem;
+        }
+
+        .spinner-border {
+            width: 1.2rem;
+            height: 1.2rem;
+            margin-right: 0.5rem;
+            vertical-align: text-top;
+        }
     </style>
 </head>
 
@@ -164,8 +180,13 @@
                         </div>
                     </div>
 
+                    <!-- Контейнер для сообщений об ошибках -->
+                    <div id="loginMessage" class="error-message mb-3"></div>
+
                     <div class="d-grid mb-3">
-                        <button type="submit" class="btn btn-primary btn-lg">Войти</button>
+                        <button type="submit" class="btn btn-primary btn-lg" id="loginButton">
+                            Войти
+                        </button>
                     </div>
 
                     <div class="text-center">
@@ -199,16 +220,79 @@
         });
 
         // Обработка формы входа
-        document.getElementById('loginForm').addEventListener('submit', function (e) {
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
             e.preventDefault();
+
+            // Получаем элементы DOM
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const loginButton = document.getElementById('loginButton');
+            const loginMessage = document.getElementById('loginMessage');
 
-            // Здесь будет запрос к серверу
-            console.log('Попытка входа:', { email, password });
+            // Сбрасываем сообщение об ошибке
+            loginMessage.textContent = '';
 
-            // Перенаправление после успешного входа
-            window.location.href = 'index.html';
+            // Показываем индикатор загрузки
+            loginButton.disabled = true;
+            const originalButtonText = loginButton.innerHTML;
+            loginButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Вход...';
+
+            try {
+                // Отправляем запрос на сервер
+                const response = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Успешный вход - сохраняем токен
+                    localStorage.setItem('token', data.token);
+
+                    // Перенаправляем на главную страницу или профиль
+                    window.location.href = 'index.html';
+                } else {
+                    // Обработка ошибок
+                    loginMessage.textContent = data.message || 'Ошибка входа. Проверьте данные';
+                }
+            } catch (error) {
+                console.error('Ошибка при входе:', error);
+                loginMessage.textContent = 'Ошибка соединения с сервером';
+            } finally {
+                // Восстанавливаем кнопку в исходное состояние
+                loginButton.disabled = false;
+                loginButton.innerHTML = originalButtonText;
+            }
+        });
+
+        // Проверка, если пользователь уже авторизован
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                // Проверяем валидность токена
+                fetch('http://localhost:3000/api/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            // Если токен валиден, перенаправляем на главную
+                            window.location.href = 'index.html';
+                        } else {
+                            // Если токен невалиден, удаляем его
+                            localStorage.removeItem('token');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка проверки токена:', error);
+                    });
+            }
         });
     </script>
 </body>
