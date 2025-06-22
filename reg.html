@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
+        /* Ваши стили остаются без изменений */
         .auth-container {
             min-height: 100vh;
             display: flex;
@@ -139,6 +140,13 @@
             margin-top: 5px;
             text-align: right;
         }
+
+        /* Добавлен стиль для сообщений об ошибке */
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
     </style>
 </head>
 
@@ -167,13 +175,22 @@
                         </div>
                     </div>
 
+                    <!-- ДОБАВЛЕНО: Поле для имени пользователя -->
                     <div class="mb-3">
-                        <label for="regEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="regEmail" placeholder="ваш@email.com" required>
+                        <label for="username" class="form-label">Имя пользователя*</label>
+                        <input type="text" class="form-control" id="username" placeholder="Придумайте уникальное имя"
+                            required>
+                        <div class="error-message" id="usernameError"></div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="regPassword" class="form-label">Пароль</label>
+                        <label for="regEmail" class="form-label">Email*</label>
+                        <input type="email" class="form-control" id="regEmail" placeholder="ваш@email.com" required>
+                        <div class="error-message" id="emailError"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="regPassword" class="form-label">Пароль*</label>
                         <div class="password-container">
                             <input type="password" class="form-control" id="regPassword" placeholder="Создайте пароль"
                                 required>
@@ -189,7 +206,7 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="confirmPassword" class="form-label">Подтвердите пароль</label>
+                        <label for="confirmPassword" class="form-label">Подтвердите пароль*</label>
                         <div class="password-container">
                             <input type="password" class="form-control" id="confirmPassword"
                                 placeholder="Повторите пароль" required>
@@ -197,8 +214,10 @@
                                 <i class="bi bi-eye"></i>
                             </span>
                         </div>
-                        <div class="invalid-feedback" id="passwordMatchError">Пароли не совпадают</div>
+                        <div class="error-message" id="passwordMatchError" style="display: none;">Пароли не совпадают
+                        </div>
                     </div>
+
                     <div class="d-grid mb-3">
                         <button type="submit" class="btn btn-success btn-lg">Создать аккаунт</button>
                     </div>
@@ -289,11 +308,9 @@
             const errorElement = document.getElementById('passwordMatchError');
 
             if (password && confirmPassword && password !== confirmPassword) {
-                document.getElementById('confirmPassword').classList.add('is-invalid');
                 errorElement.style.display = 'block';
                 return false;
             } else {
-                document.getElementById('confirmPassword').classList.remove('is-invalid');
                 errorElement.style.display = 'none';
                 return true;
             }
@@ -303,23 +320,86 @@
         document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
 
         // Обработка формы регистрации
-        document.getElementById('registerForm').addEventListener('submit', function (e) {
+        document.getElementById('registerForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
+            // Сброс сообщений об ошибках
+            document.getElementById('usernameError').textContent = '';
+            document.getElementById('emailError').textContent = '';
+            document.getElementById('passwordMatchError').style.display = 'none';
+
+            // Проверка совпадения паролей
             if (!checkPasswordMatch()) {
                 return;
             }
 
+            // Сбор данных формы
             const firstName = document.getElementById('firstName').value;
             const lastName = document.getElementById('lastName').value;
+            const username = document.getElementById('username').value; // Новое поле
             const email = document.getElementById('regEmail').value;
             const password = document.getElementById('regPassword').value;
 
-            // Здесь будет запрос к серверу
-            console.log('Регистрация:', { firstName, lastName, email, password });
+            // Формирование объекта для отправки
+            const userData = {
+                username: username,
+                email: email,
+                password: password,
+                full_name: `${firstName} ${lastName}`,
+                // Дополнительные поля, которые могут быть полезны
+                city: '',
+                bio: ''
+            };
 
-            // Перенаправление после успешной регистрации
-            window.location.href = 'profile-setup.html';
+            try {
+                // Отправка данных на сервер
+                const response = await fetch('http://localhost:3000/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Успешная регистрация
+                    alert('Регистрация прошла успешно! Теперь вы можете войти в систему.');
+                    window.location.href = 'login.html';
+                } else {
+                    // Обработка ошибок сервера
+                    if (data.message.includes('username')) {
+                        document.getElementById('usernameError').textContent = data.message;
+                    } else if (data.message.includes('email')) {
+                        document.getElementById('emailError').textContent = data.message;
+                    } else {
+                        alert(`Ошибка регистрации: ${data.message}`);
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка при отправке запроса:', error);
+                alert('Произошла ошибка при соединении с сервером. Пожалуйста, попробуйте позже.');
+            }
+        });
+
+        // ДОБАВЛЕНО: Проверка доступности имени пользователя в реальном времени
+        document.getElementById('username').addEventListener('blur', async function () {
+            const username = this.value;
+            if (!username) return;
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/check-username?username=${encodeURIComponent(username)}`);
+                const data = await response.json();
+
+                if (!data.available) {
+                    document.getElementById('usernameError').textContent = 'Это имя пользователя уже занято';
+                } else {
+                    document.getElementById('usernameError').textContent = '';
+                }
+            } catch (error) {
+                console.error('Ошибка при проверке имени пользователя:', error);
+            }
         });
     </script>
 </body>
