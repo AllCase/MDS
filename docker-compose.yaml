@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Backend приложение
   backend:
     build: 
       context: ./backend
@@ -10,11 +9,13 @@ services:
       TZ: Europe/Moscow 
       NODE_ENV: production
       JWT_SECRET: your_very_strong_secret_here
-      DB_HOST: 192.168.0.4  # Публичный IP из вашего скрина
+      DB_HOST: 176.53.160.66  # Правильный IP из скриншота
       DB_PORT: 5432
-      DB_USER: gen_user       # Пользователь из скрина
-      DB_PASSWORD: YZ>|^DuMF+P7LX  # Замените на реальный пароль
-      DB_NAME: default_db     # База данных из скрина
+      DB_USER: gen_user
+      DB_PASSWORD: YZ>|^DuMF+P7LX
+      DB_NAME: default_db
+      DB_SSL: true  # Добавьте эту переменную
+      DB_SSL_CERT: /app/root.crt  # Путь к сертификату в контейнере
     networks:
       - app-network
     healthcheck:
@@ -22,8 +23,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    # Монтируем сертификат в контейнер
+    volumes:
+      - ./root.crt:/app/root.crt:ro
 
-  # Nginx с кастомным образом
   nginx:
     build:
       context: .
@@ -36,11 +39,6 @@ services:
     networks:
       - app-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 networks:
   app-network:
