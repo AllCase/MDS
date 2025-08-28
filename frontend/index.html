@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Day Sync - Главная</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script>
+        // Система защиты авторизации
+        (function () {
+            // Разрешенные страницы без авторизации
+            const allowedPages = ['aut.html', 'reg.html'];
+            const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+
+            const token = localStorage.getItem('authToken');
+            const isLoggedIn = !!token;
+
+            // Если пользователь не авторизован и пытается получить доступ к защищенной странице
+            if (!isLoggedIn && !allowedPages.includes(currentPage)) {
+                sessionStorage.setItem('redirectUrl', window.location.href);
+                window.location.href = 'aut.html';
+            }
+
+            // Если пользователь авторизован и пытается получить доступ к странице входа/регистрации
+            if (isLoggedIn && allowedPages.includes(currentPage)) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    <style>
+        .event-card {
+            transition: transform 0.3s;
+            border-radius: 15px;
+            overflow: hidden;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .event-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .sport-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+        .map-preview {
+            height: 150px;
+            background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+        }
+
+        .category-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 2;
+        }
+
+        .collapsed .bi-chevron-down {
+            display: inline-block;
+        }
+
+        .collapsed .bi-chevron-up {
+            display: none;
+        }
+
+        .not-collapsed .bi-chevron-down {
+            display: none;
+        }
+
+        .not-collapsed .bi-chevron-up {
+            display: inline-block;
+        }
+
+        .sports-filter-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 0.5rem 0;
+            font-weight: 500;
+        }
+
+        .loading-spinner {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Шапка -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="logo.jpg" alt="MDS" height="60">
+            </a>
+            <!-- Навигация -->
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="index.html">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="my_events.html">Мои мероприятия</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Календарь</a>
+                    </li>
+                </ul>
+
+                <!-- Поиск и профиль -->
+                <div class="d-flex align-items-center">
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
+                            data-bs-toggle="dropdown">
+                            <img src="Person.svg" class="me-2" width="32" height="32" alt="Профиль">
+                            <span id="headerUserName">Иван Петров</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="profile.html">Мой профиль</a></li>
+                            <li><a class="dropdown-item" href="my_events.html">Мои мероприятия</a></li>
+                            <li><a class="dropdown-item" href="settings.html">Настройки</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger" href="#" id="logoutLink">Выйти</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Основной контент -->
+    <div class="container my-4">
+        <div class="row">
+            <!-- Боковая панель -->
+            <div class="col-lg-3 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        Фильтры мероприятий
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Дата</label>
+                            <select class="form-select" id="dateFilter">
+                                <option value="all">Любая</option>
+                                <option value="today">Сегодня</option>
+                                <option value="tomorrow">Завтра</option>
+                                <option value="weekend">На выходных</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <button class="btn btn-link p-0 text-start sports-filter-btn" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#sportsCollapse" aria-expanded="false"
+                                aria-controls="sportsCollapse">
+                                Вид спорта
+                                <span>
+                                    <i class="bi bi-chevron-down"></i>
+                                    <i class="bi bi-chevron-up"></i>
+                                </span>
+                            </button>
+
+                            <div class="collapse" id="sportsCollapse">
+                                <div class="mt-2" id="sportsFilterContainer">
+                                    <!-- Фильтры видов спорта будут добавлены динамически -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary w-100" id="applyFiltersBtn">Применить фильтры</button>
+                        <button class="btn btn-outline-secondary w-100 mt-2" id="resetFiltersBtn">Сбросить
+                            фильтры</button>
+                    </div>
+                </div>
+
+                <!-- Блок "Ваши события" -->
+                <div class="card mt-4">
+                    <div class="card-header bg-info text-white">
+                        Ваши события
+                    </div>
+                    <ul class="list-group list-group-flush" id="userEventsList">
+                        <!-- События пользователя будут добавлены динамически -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Лента мероприятий -->
+            <div class="col-lg-9">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Предстоящие мероприятия</h2>
+                    <div class="input-group me-3">
+                        <input type="text" class="form-control" placeholder="Найти мероприятие" id="searchInput">
+                        <button class="btn btn-outline-primary" type="button" id="searchBtn">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                    <a href="create.html">
+                        <button class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Создать событие
+                        </button>
+                    </a>
+                </div>
+
+                <!-- Карточки мероприятий -->
+                <div class="row row-cols-1 row-cols-md-2 g-4" id="eventsContainer">
+                    <!-- События будут загружены динамически -->
+                </div>
+
+                <!-- Индикатор загрузки -->
+                <div class="text-center my-5" id="loadingIndicator">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                    <p class="mt-2">Загрузка мероприятий...</p>
+                </div>
+
+                <!-- Сообщение, когда нет событий -->
+                <div class="text-center d-none" id="noEventsMessage">
+                    <p>Нет мероприятий, соответствующих вашим фильтрам.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Футер -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5>Match Day Sync</h5>
+                    <p>Платформа для организации спортивных мероприятий и поиска единомышленников.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Контакты</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-envelope me-2"></i> contact@MatchDaySync.ru</li>
+                        <li><i class="bi bi-telephone me-2"></i> +7 (495) 123-45-67</li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Мы в соцсетях</h5>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-white fs-4"><i class="bi bi-telegram"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-vk"></i></a>
+                    </div>
+                </div>
+            </div>
+            <hr class="bg-light">
+            <div class="text-center">
+                <small>© 2025 Match Day Sync. Все права защищены.</small>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Функция для выхода из системы
+        function logout() {
+            localStorage.removeItem('authToken');
+            window.location.href = 'aut.html';
+        }
+
+        // Функция для загрузки данных пользователя
+        async function loadUserProfile() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/user', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('headerUserName').textContent = user.full_name || 'Пользователь';
+                    return user;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки профиля:', error);
+            }
+            return null;
+        }
+
+        // Функция для загрузки событий
+        async function loadEvents(filters = {}) {
+            try {
+                // Показать индикатор загрузки
+                document.getElementById('loadingIndicator').classList.remove('d-none');
+                document.getElementById('noEventsMessage').classList.add('d-none');
+
+                // Создать URL с параметрами фильтрации
+                const params = new URLSearchParams();
+                if (filters.sportType) params.append('sport_type', filters.sportType);
+                if (filters.date) {
+                    const today = new Date();
+                    switch (filters.date) {
+                        case 'today':
+                            params.append('date_from', today.toISOString().split('T')[0]);
+                            params.append('date_to', today.toISOString().split('T')[0]);
+                            break;
+                        case 'tomorrow':
+                            const tomorrow = new Date(today);
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            params.append('date_from', tomorrow.toISOString().split('T')[0]);
+                            params.append('date_to', tomorrow.toISOString().split('T')[0]);
+                            break;
+                        case 'weekend':
+                            // Логика для выходных
+                            break;
+                    }
+                }
+                if (filters.search) params.append('search', filters.search);
+
+                const url = `/api/events?${params.toString()}`;
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Ошибка загрузки событий');
+
+                const events = await response.json();
+                renderEvents(events);
+            } catch (error) {
+                console.error('Ошибка загрузки событий:', error);
+                document.getElementById('eventsContainer').innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger">${error.message}</div>
+                    </div>
+                `;
+            } finally {
+                document.getElementById('loadingIndicator').classList.add('d-none');
+            }
+        }
+
+        // Функция для отрисовки событий
+        function renderEvents(events) {
+            const container = document.getElementById('eventsContainer');
+            container.innerHTML = '';
+
+            if (events.length === 0) {
+                document.getElementById('noEventsMessage').classList.remove('d-none');
+                return;
+            }
+
+            events.forEach(event => {
+                const eventCard = createEventCard(event);
+                container.innerHTML += eventCard;
+            });
+        }
+
+        // Функция для безопасного создания даты
+        function createEventDate(event) {
+            if (!event.event_date || !event.event_time) {
+                console.error('Missing date or time for event:', event.id);
+                return null;
+            }
+
+            try {
+                const datePart = new Date(event.event_date);
+                if (isNaN(datePart.getTime())) return null;
+
+                const [hours, minutes] = event.event_time.split(':');
+                datePart.setHours(parseInt(hours, 10));
+                datePart.setMinutes(parseInt(minutes, 10));
+
+                return datePart;
+            } catch (error) {
+                console.error('Error creating date for event:', event.id, error);
+                return null;
+            }
+        }
+
+        // Функция для создания карточки события
+        function createEventCard(event) {
+            // Определяем иконку и текст для цены
+            const price = parseFloat(event.price);
+            const priceText = price > 0 ? `${price.toFixed(2)} ₽` : 'Бесплатно';
+            const priceClass = price > 0 ? 'bg-warning text-dark' : 'bg-danger';
+
+            // Иконка вида спорта
+            const sportIcons = {
+                running: 'running.svg',
+                cycling: 'cycling.svg',
+                football: 'football.svg',
+                basketball: 'basketball.svg',
+                tennis: 'tennis.svg',
+                volleyball: 'volleyball.svg',
+                swimming: 'swimming.svg',
+                yoga: 'yoga.svg'
+            };
+
+            const sportIcon = sportIcons[event.sport_type] || 'default.svg';
+
+            // Форматируем дату и время с защитой от ошибок
+            let formattedDate = event.event_date;
+            let formattedTime = event.event_time.substring(0, 5);
+
+            const eventDateObj = createEventDate(event);
+            if (eventDateObj) {
+                formattedDate = eventDateObj.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                formattedTime = eventDateObj.toLocaleTimeString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            // Участники
+            const participantsText = event.max_participants
+                ? `${event.participant_count || 0}/${event.max_participants}`
+                : (event.participant_count || 0);
+
+            return `
+        <div class="col">
+            <div class="card h-100 event-card">
+                <span class="category-badge badge ${priceClass}">${priceText}</span>
+                <div class="map-preview"></div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title">${event.title}</h5>
+                        <img src="${sportIcon}" class="sport-icon" alt="${event.sport_type}">
+                    </div>
+                    <p class="card-text">
+                        <i class="bi bi-calendar"></i> ${formattedDate}<br>
+                        <i class="bi bi-clock"></i> ${formattedTime}<br>
+                        <i class="bi bi-geo-alt"></i> ${event.location}<br>
+                        <i class="bi bi-people"></i> ${participantsText} участников
+                    </p>
+                    <div class="d-flex justify-content-between">
+                        <a href="event-details.html?id=${event.id}" class="btn btn-outline-primary">Подробнее</a>
+                        <button class="btn btn-primary participate-btn" data-event-id="${event.id}">Участвовать</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+        }
+
+        // Функция для загрузки событий пользователя
+        async function loadUserEvents() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+
+            try {
+                const user = await loadUserProfile();
+                if (!user) return;
+
+                const response = await fetch(`/api/events?organizer_id=${user.id}`);
+                if (!response.ok) throw new Error('Ошибка загрузки событий пользователя');
+
+                const events = await response.json();
+                renderUserEvents(events);
+            } catch (error) {
+                console.error('Ошибка загрузки событий пользователя:', error);
+            }
+        }
+
+        // Функция для отрисовки событий пользователя
+        function renderUserEvents(events) {
+            const container = document.getElementById('userEventsList');
+            container.innerHTML = '';
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <li class="list-group-item text-center">
+                        У вас пока нет событий
+                    </li>
+                `;
+                return;
+            }
+
+            events.slice(0, 3).forEach(event => {
+                const eventDate = new Date(`${event.event_date}T${event.event_time}`);
+                const now = new Date();
+                const diffTime = eventDate - now;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let badgeText, badgeClass;
+                if (diffDays < 0) {
+                    badgeText = 'Завершено';
+                    badgeClass = 'bg-secondary';
+                } else if (diffDays === 0) {
+                    badgeText = 'Сегодня';
+                    badgeClass = 'bg-success';
+                } else if (diffDays === 1) {
+                    badgeText = 'Завтра';
+                    badgeClass = 'bg-primary';
+                } else if (diffDays <= 7) {
+                    badgeText = `Через ${diffDays} дн.`;
+                    badgeClass = 'bg-info';
+                } else {
+                    badgeText = eventDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+                    badgeClass = 'bg-light text-dark';
+                }
+
+                container.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${event.title}
+                        <span class="badge ${badgeClass}">${badgeText}</span>
+                    </li>
+                `;
+            });
+
+            if (events.length > 3) {
+                container.innerHTML += `
+                    <li class="list-group-item text-center">
+                        <a href="my_events.html">Показать все (${events.length})</a>
+                    </li>
+                `;
+            }
+        }
+
+        // Функция для инициализации фильтров
+        function initFilters() {
+            // Виды спорта
+            const sports = [
+                { id: 'running', name: '🏃 Бег' },
+                { id: 'cycling', name: '🚴 Велоспорт' },
+                { id: 'football', name: '⚽ Футбол' },
+                { id: 'basketball', name: '🏀 Баскетбол' },
+                { id: 'tennis', name: '🎾 Теннис' },
+                { id: 'volleyball', name: '🏐 Волейбол' },
+                { id: 'swimming', name: '🏊 Плавание' },
+                { id: 'yoga', name: '🧘 Йога' }
+            ];
+
+            const container = document.getElementById('sportsFilterContainer');
+            sports.forEach(sport => {
+                container.innerHTML += `
+                    <div class="form-check">
+                        <input class="form-check-input sport-filter" type="checkbox" id="${sport.id}" value="${sport.id}">
+                        <label class="form-check-label" for="${sport.id}">
+                            ${sport.name}
+                        </label>
+                    </div>
+                `;
+            });
+        }
+
+        // Обработчик загрузки страницы
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Инициализация фильтров
+            initFilters();
+
+            // Загрузка данных пользователя
+            await loadUserProfile();
+
+            // Загрузка событий пользователя
+            await loadUserEvents();
+
+            // Загрузка всех событий
+            await loadEvents();
+
+            // Обработчики фильтров
+            document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
+            document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+            document.getElementById('searchBtn').addEventListener('click', applyFilters);
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') applyFilters();
+            });
+
+            // Обработчик выхода
+            document.getElementById('logoutLink').addEventListener('click', (e) => {
+                e.preventDefault();
+                logout();
+            });
+
+            // Обработчик кнопок "Участвовать"
+            document.addEventListener('click', async function (e) {
+                if (e.target.classList.contains('participate-btn')) {
+                    const eventId = e.target.dataset.eventId;
+                    const token = localStorage.getItem('authToken');
+
+                    if (!token) {
+                        alert('Для участия необходимо войти в систему');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/api/events/${eventId}/participate`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+
+                        if (response.ok) {
+                            alert('Вы успешно зарегистрировались на событие!');
+                            // Перезагружаем события
+                            loadEvents();
+                        } else {
+                            const error = await response.json();
+                            throw new Error(error.error || 'Ошибка регистрации');
+                        }
+                    } catch (error) {
+                        alert(`Ошибка: ${error.message}`);
+                    }
+                }
+            });
+        });
+
+        // Применение фильтров
+        function applyFilters() {
+            const filters = {};
+
+            // Фильтр по дате
+            filters.date = document.getElementById('dateFilter').value;
+
+            // Фильтр по виду спорта
+            const selectedSports = Array.from(document.querySelectorAll('.sport-filter:checked'))
+                .map(checkbox => checkbox.value);
+
+            if (selectedSports.length > 0) {
+                filters.sportType = selectedSports.join(',');
+            }
+
+            // Поисковый запрос
+            const searchQuery = document.getElementById('searchInput').value.trim();
+            if (searchQuery) {
+                filters.search = searchQuery;
+            }
+
+            loadEvents(filters);
+        }
+
+        // Сброс фильтров
+        function resetFilters() {
+            document.getElementById('dateFilter').value = 'all';
+            document.querySelectorAll('.sport-filter').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            document.getElementById('searchInput').value = '';
+            loadEvents();
+        }
+    </script>
+</body>
+
+</html>

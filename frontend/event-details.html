@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Детали события - Match Day Sync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .event-header {
+            background: linear-gradient(120deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: white;
+            padding: 80px 0 40px;
+            margin-bottom: 40px;
+        }
+
+        .event-image {
+            height: 300px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .organizer-card {
+            transition: transform 0.3s;
+        }
+
+        .organizer-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .participate-btn {
+            font-size: 1.2rem;
+            padding: 10px 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Шапка -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="logo.jpg" alt="MDS" height="60">
+            </a>
+            <!-- Навигация -->
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="index.html">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="my_events.html">Мои мероприятия</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Календарь</a>
+                    </li>
+                </ul>
+
+                <!-- Поиск и профиль -->
+                <div class="d-flex align-items-center">
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
+                            data-bs-toggle="dropdown">
+                            <img src="Person.svg" class="me-2" width="32" height="32" alt="Профиль">
+                            <span id="headerUserName">Иван Петров</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="profile.html">Мой профиль</a></li>
+                            <li><a class="dropdown-item" href="my_events.html">Мои мероприятия</a></li>
+                            <li><a class="dropdown-item" href="settings.html">Настройки</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger" href="#" id="logoutLink">Выйти</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Шапка события -->
+    <div class="event-header">
+        <div class="container text-center">
+            <h1 id="eventTitle">Загрузка...</h1>
+            <div class="mt-3">
+                <span id="eventSportBadge" class="badge bg-primary fs-6">Загрузка...</span>
+                <span id="eventTypeBadge" class="badge bg-info fs-6">Загрузка...</span>
+            </div>
+            <p id="eventDateTime" class="lead mt-3">Загрузка даты и времени...</p>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="container mb-5">
+        <div class="row">
+            <!-- Левая колонка -->
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h3 class="card-title mb-4">Описание</h3>
+                        <p id="eventDescription" class="fs-5">Загрузка описания...</p>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h3 class="mb-0">Детали события</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="bi bi-calendar me-2"></i>Дата:</span>
+                                        <span id="eventDate">-</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="bi bi-clock me-2"></i>Время:</span>
+                                        <span id="eventTime">-</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="bi bi-cash-coin me-2"></i>Цена:</span>
+                                        <span id="eventPrice">-</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="bi bi-people me-2"></i>Участники:</span>
+                                        <span id="eventParticipants">-</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="bi bi-person-plus me-2"></i>Возраст:</span>
+                                        <span id="eventAgeRestriction">-</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="bi bi-geo-alt me-2"></i>Место:</span>
+                                        <span id="eventLocation">-</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h3 class="mb-0">Местоположение</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="map" style="height: 300px; background: #f0f0f0; border-radius: 0 0 10px 10px;">
+                            <div class="d-flex justify-content-center align-items-center h-100">
+                                <div class="text-center">
+                                    <i class="bi bi-map display-1 text-secondary"></i>
+                                    <p class="mt-2">Карта загружается...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая колонка -->
+            <div class="col-lg-4">
+                <div class="card mb-4 organizer-card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Организатор</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <img src="Person.svg" alt="Организатор" width="60" height="60" class="rounded-circle">
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 id="organizerName">Загрузка...</h6>
+                                <p class="text-muted mb-0">Организатор события</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Участие</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <button id="participateBtn" class="btn btn-primary participate-btn w-100 mb-3">
+                            <i class="bi bi-check-circle me-2"></i> Принять участие
+                        </button>
+                        <div class="progress mb-3">
+                            <div id="participantsProgress" class="progress-bar" role="progressbar"></div>
+                        </div>
+                        <p class="text-muted">
+                            <span id="availableSpots">0</span> из <span id="maxParticipants">0</span> мест свободно
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Действия</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="bi bi-share me-2"></i> Поделиться
+                        </button>
+                        <button class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-calendar-plus me-2"></i> Добавить в календарь
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Футер (такой же, как на других страницах) -->
+    <footer class="bg-dark text-white py-4">
+        <!-- ... ваш код футера ... -->
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Функция для загрузки деталей события
+        async function loadEventDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('id');
+
+            if (!eventId) {
+                showError('Событие не найдено');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/events/${eventId}`);
+                if (!response.ok) throw new Error('Событие не найдено');
+
+                const event = await response.json();
+                renderEventDetails(event);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // Новая функция для безопасного создания даты
+        function createEventDate(event) {
+
+            // Создаем базовую дату без времени
+            const datePart = new Date(event.event_date);
+
+            // Если дата невалидна, возвращаем null
+            if (isNaN(datePart.getTime())) return null;
+
+            // Добавляем время
+            const [hours, minutes] = event.event_time.split(':');
+            datePart.setHours(parseInt(hours, 10));
+            datePart.setMinutes(parseInt(minutes, 10));
+
+            return datePart;
+        }
+
+        // Функция для отображения деталей события
+        function renderEventDetails(event) {
+            // Форматируем дату и время
+            const eventDate = createEventDate(event);
+            let formattedDate = event.event_date;
+            let formattedTime = event.event_time.substring(0, 5);
+
+            if (eventDate) {
+                formattedDate = eventDate.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                formattedTime = eventDate.toLocaleTimeString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            // Иконки для видов спорта
+            const sportIcons = {
+                running: '🏃 Бег',
+                cycling: '🚴 Велоспорт',
+                football: '⚽ Футбол',
+                basketball: '🏀 Баскетбол',
+                tennis: '🎾 Теннис',
+                volleyball: '🏐 Волейбол',
+                swimming: '🏊 Плавание',
+                yoga: '🧘 Йога'
+            };
+
+            // Форматируем цену
+            const price = parseFloat(event.price);
+            const priceText = price > 0 ? `${price.toFixed(2)} ₽` : 'Бесплатно';
+
+            // Возрастные ограничения
+            const ageText = event.age_restriction > 0 ? `${event.age_restriction}+` : 'Без ограничений';
+
+            // Участники
+            const maxParticipants = event.max_participants || '∞';
+            const participants = event.participant_count || 0;
+            const available = maxParticipants !== '∞' ? maxParticipants - participants : '∞';
+
+            // Обновляем элементы страницы
+            document.getElementById('eventTitle').textContent = event.title;
+            document.getElementById('eventSportBadge').textContent = sportIcons[event.sport_type] || event.sport_type;
+            document.getElementById('eventTypeBadge').textContent = event.event_type;
+            document.getElementById('eventDateTime').textContent = `${formattedDate}, ${formattedTime}`;
+            document.getElementById('eventDescription').textContent = event.description || 'Описание отсутствует';
+
+            document.getElementById('eventDate').textContent = formattedDate;
+            document.getElementById('eventTime').textContent = formattedTime;
+            document.getElementById('eventPrice').textContent = priceText;
+            document.getElementById('eventParticipants').textContent = `${participants} / ${maxParticipants}`;
+            document.getElementById('eventAgeRestriction').textContent = ageText;
+            document.getElementById('eventLocation').textContent = event.location;
+
+            document.getElementById('organizerName').textContent = event.organizer_name || 'Неизвестный организатор';
+
+            document.getElementById('availableSpots').textContent = available;
+            document.getElementById('maxParticipants').textContent = maxParticipants;
+
+            // Прогресс-бар участников
+            if (maxParticipants !== '∞' && maxParticipants > 0) {
+                const progress = (participants / maxParticipants) * 100;
+                const progressBar = document.getElementById('participantsProgress');
+                progressBar.style.width = `${progress}%`;
+                progressBar.textContent = `${Math.round(progress)}%`;
+                progressBar.classList.add(progress > 80 ? 'bg-danger' : 'bg-success');
+            }
+
+            // Обработчик кнопки участия
+            document.getElementById('participateBtn').addEventListener('click', async () => {
+                try {
+                    const token = localStorage.getItem('authToken');
+                    if (!token) {
+                        alert('Для участия необходимо войти в систему');
+                        return;
+                    }
+
+                    const response = await fetch(`/api/events/${event.id}/participate`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        alert('Вы успешно зарегистрировались на событие!');
+                        // Перезагружаем данные события
+                        loadEventDetails();
+                    } else {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Не удалось зарегистрироваться');
+                    }
+                } catch (error) {
+                    alert(`Ошибка: ${error.message}`);
+                }
+            });
+        }
+
+        // Функция для отображения ошибки
+        function showError(message) {
+            document.querySelector('.event-header').innerHTML = `
+                <div class="container text-center">
+                    <h1 class="text-danger">Ошибка</h1>
+                    <p class="lead">${message}</p>
+                    <a href="index.html" class="btn btn-primary mt-3">
+                        <i class="bi bi-arrow-left me-2"></i> Вернуться на главную
+                    </a>
+                </div>
+            `;
+        }
+
+        // Обработчик загрузки страницы
+        document.addEventListener('DOMContentLoaded', loadEventDetails);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация - Match Day Sync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        /* Ваши стили остаются без изменений */
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(120deg, #1a2a6c, #b21f1f, #1a2a6c);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            padding: 20px;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .auth-card {
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .auth-header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px 30px 20px;
+            text-align: center;
+        }
+
+        .auth-logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            border-radius: 50%;
+            color: white;
+            font-size: 40px;
+        }
+
+        .auth-body {
+            background: white;
+            padding: 30px;
+        }
+
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .social-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .social-btn i {
+            font-size: 1.4rem;
+            margin-right: 10px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 25px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .divider span {
+            padding: 0 15px;
+            color: #6c757d;
+        }
+
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(17, 153, 142, 0.25);
+            border-color: #11998e;
+        }
+
+        .auth-footer {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+        .password-container {
+            position: relative;
+        }
+
+        .progress {
+            height: 8px;
+            margin-top: 5px;
+        }
+
+        .password-strength-text {
+            font-size: 0.85rem;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        /* Добавлен стиль для сообщений об ошибке */
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <h2>Создать аккаунт</h2>
+                <p class="text-muted">Присоединяйтесь к спортивному сообществу</p>
+            </div>
+
+            <div class="auth-body">
+                <!-- Форма регистрации -->
+                <form id="registerForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="firstName" class="form-label">Имя</label>
+                            <input type="text" class="form-control" id="firstName" placeholder="Ваше имя" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="lastName" class="form-label">Фамилия</label>
+                            <input type="text" class="form-control" id="lastName" placeholder="Ваша фамилия" required>
+                        </div>
+                    </div>
+
+                    <!-- ДОБАВЛЕНО: Поле для имени пользователя -->
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Имя пользователя*</label>
+                        <input type="text" class="form-control" id="username" placeholder="Придумайте уникальное имя"
+                            required>
+                        <div class="error-message" id="usernameError"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="regEmail" class="form-label">Email*</label>
+                        <input type="email" class="form-control" id="regEmail" placeholder="ваш@email.com" required>
+                        <div class="error-message" id="emailError"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="regPassword" class="form-label">Пароль*</label>
+                        <div class="password-container">
+                            <input type="password" class="form-control" id="regPassword" placeholder="Создайте пароль"
+                                required>
+                            <span class="password-toggle" id="regPasswordToggle">
+                                <i class="bi bi-eye"></i>
+                            </span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" id="passwordStrengthBar" role="progressbar" style="width: 0%">
+                            </div>
+                        </div>
+                        <div class="password-strength-text" id="passwordStrengthText">Слабый пароль</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="confirmPassword" class="form-label">Подтвердите пароль*</label>
+                        <div class="password-container">
+                            <input type="password" class="form-control" id="confirmPassword"
+                                placeholder="Повторите пароль" required>
+                            <span class="password-toggle" id="confirmPasswordToggle">
+                                <i class="bi bi-eye"></i>
+                            </span>
+                        </div>
+                        <div class="error-message" id="passwordMatchError" style="display: none;">Пароли не совпадают
+                        </div>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-success btn-lg">Создать аккаунт</button>
+                    </div>
+
+                    <div class="text-center">
+                        <p>Уже есть аккаунт? <a href="aut.html">Войти</a></p>
+                    </div>
+                </form>
+            </div>
+
+            <div class="auth-footer">
+                <p class="mb-0">© 2025 Match Day Sync. Все права защищены.<br>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Переключение видимости пароля
+        function setupPasswordToggle(inputId, toggleId) {
+            const toggle = document.getElementById(toggleId);
+            const input = document.getElementById(inputId);
+
+            toggle.addEventListener('click', function () {
+                const icon = this.querySelector('i');
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('bi-eye');
+                    icon.classList.add('bi-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('bi-eye-slash');
+                    icon.classList.add('bi-eye');
+                }
+            });
+        }
+
+        // Инициализация переключателей
+        setupPasswordToggle('regPassword', 'regPasswordToggle');
+        setupPasswordToggle('confirmPassword', 'confirmPasswordToggle');
+
+        // Проверка сложности пароля
+        document.getElementById('regPassword').addEventListener('input', function () {
+            const password = this.value;
+            const strengthBar = document.getElementById('passwordStrengthBar');
+            const strengthText = document.getElementById('passwordStrengthText');
+
+            let strength = 0;
+            let text = '';
+            let color = '';
+
+            // Проверка длины
+            if (password.length >= 8) strength += 25;
+
+            // Проверка наличия символов в разных регистрах
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 25;
+
+            // Проверка наличия цифр
+            if (/\d/.test(password)) strength += 25;
+
+            // Проверка наличия спецсимволов
+            if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 25;
+
+            // Определение сложности
+            if (strength < 50) {
+                text = 'Слабый пароль';
+                color = 'bg-danger';
+            } else if (strength < 75) {
+                text = 'Средний пароль';
+                color = 'bg-warning';
+            } else {
+                text = 'Надёжный пароль';
+                color = 'bg-success';
+            }
+
+            // Обновление UI
+            strengthBar.style.width = strength + '%';
+            strengthBar.className = 'progress-bar ' + color;
+            strengthText.textContent = text;
+            strengthText.className = 'password-strength-text ' + color.replace('bg-', 'text-');
+        });
+
+        // Проверка совпадения паролей
+        function checkPasswordMatch() {
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorElement = document.getElementById('passwordMatchError');
+
+            if (password && confirmPassword && password !== confirmPassword) {
+                errorElement.style.display = 'block';
+                return false;
+            } else {
+                errorElement.style.display = 'none';
+                return true;
+            }
+        }
+
+        document.getElementById('regPassword').addEventListener('input', checkPasswordMatch);
+        document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
+
+        // Обработка формы регистрации
+        document.getElementById('registerForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            // Сброс сообщений об ошибках
+            document.getElementById('usernameError').textContent = '';
+            document.getElementById('emailError').textContent = '';
+            document.getElementById('passwordMatchError').style.display = 'none';
+
+            // Проверка совпадения паролей
+            if (!checkPasswordMatch()) {
+                return;
+            }
+
+            // Сбор данных формы
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const username = document.getElementById('username').value; // Новое поле
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+
+            // Формирование объекта
+            const userData = {
+                username: username,
+                email: email,
+                password: password,
+                full_name: `${firstName} ${lastName}`
+            };
+
+            try {
+                // Отправка данных
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+
+                // Успешная регистрация
+                if (response.ok) {
+                    alert('Регистрация прошла успешно! Теперь вы можете войти в систему.');
+                    window.location.href = 'aut.html';
+                }
+                // Обработка ошибок
+                else {
+                    // Проверяем наличие сообщения об ошибке
+                    if (data && data.error) {
+                        // Проверяем тип ошибки
+                        if (data.error.includes('email')) {
+                            document.getElementById('emailError').textContent = data.error;
+                        }
+                        else if (data.error.includes('username')) {
+                            document.getElementById('usernameError').textContent = data.error;
+                        }
+                        else {
+                            alert(`Ошибка регистрации: ${data.error}`);
+                        }
+                    }
+                    // Если структура ответа не соответствует ожидаемой
+                    else {
+                        alert('Неизвестная ошибка сервера');
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка при отправке запроса:', error);
+                alert('Произошла ошибка при соединении с сервером. Пожалуйста, попробуйте позже.');
+            }
+        });
+
+        // ДОБАВЛЕНО: Проверка доступности имени пользователя в реальном времени
+        document.getElementById('username').addEventListener('blur', async function () {
+            const username = this.value;
+            if (!username) return;
+
+            try {
+                const response = await fetch(`${window.location.origin}/api/check-username?username=${encodeURIComponent(username)}`);
+                const data = await response.json();
+
+                if (!data.available) {
+                    document.getElementById('usernameError').textContent = 'Это имя пользователя уже занято';
+                } else {
+                    document.getElementById('usernameError').textContent = '';
+                }
+            } catch (error) {
+                console.error('Ошибка при проверке имени пользователя:', error);
+            }
+        });
+    </script>
+</body>
+
+</html>
