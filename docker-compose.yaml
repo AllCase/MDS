@@ -5,38 +5,21 @@ services:
     build: 
       context: ./backend
     restart: unless-stopped
+    ports:
+      - "80:3000"  # Прямое пробрасывание порта
     environment:
       TZ: Europe/Moscow 
       NODE_ENV: production
       JWT_SECRET: your_very_strong_secret_here
-      DB_HOST: 176.53.160.66  # Правильный IP из скриншота
+      DB_HOST: 6efc77aa9da03edbf209d4a0.twc1.net
       DB_PORT: 5432
       DB_USER: gen_user
       DB_PASSWORD: YZ>|^DuMF+P7LX
       DB_NAME: default_db
-      DB_SSL: true  # Добавьте эту переменную
-      DB_SSL_CERT: /app/root.crt  # Путь к сертификату в контейнере
-    networks:
-      - app-network
+      DB_SSL: true
+      DB_SSL_CERT: /app/root.crt
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 5
-
-  nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
-    depends_on:
-      backend:
-        condition: service_healthy
-    ports:
-      - "80:80"
-    networks:
-      - app-network
-    restart: unless-stopped
-
-networks:
-  app-network:
-    driver: bridge
