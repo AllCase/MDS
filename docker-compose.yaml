@@ -1,39 +1,24 @@
 version: '3.8'
 
 services:
-  # PostgreSQL (без тома)
-  db:
-    image: postgres:15
-    environment:
-      TZ: Europe/Moscow 
-      POSTGRES_USER: myapp_user
-      POSTGRES_PASSWORD: secure_password
-      POSTGRES_DB: myapp_db
-    # Убрано: volumes
-    networks:
-      - app-network
-    restart: unless-stopped
-
   # Backend приложение
   backend:
     build: 
       context: ./backend
     restart: unless-stopped
-    depends_on:
-      - db
     environment:
       TZ: Europe/Moscow 
       NODE_ENV: production
       JWT_SECRET: your_very_strong_secret_here
-      DB_HOST: db
+      DB_HOST: 176.53.168.66  # Публичный IP из вашего скрина
       DB_PORT: 5432
-      DB_USER: myapp_user
-      DB_PASSWORD: secure_password
-      DB_NAME: myapp_db
+      DB_USER: gen_user       # Пользователь из скрина
+      DB_PASSWORD: YZ>|^DuMF+P7LX  # Замените на реальный пароль
+      DB_NAME: default_db     # База данных из скрина
     networks:
       - app-network
 
-  # Nginx с кастомным образом (без томов)
+  # Nginx с кастомным образом
   nginx:
     build:
       context: .
