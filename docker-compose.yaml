@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # PostgreSQL
+  # PostgreSQL (без тома)
   db:
     image: postgres:15
     environment:
@@ -9,50 +9,43 @@ services:
       POSTGRES_USER: myapp_user
       POSTGRES_PASSWORD: secure_password
       POSTGRES_DB: myapp_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
+    # Убрано: volumes
     networks:
       - app-network
+    restart: unless-stopped
 
+  # Backend приложение
   backend:
-    build: ./backend
-    restart: unless-stopped  # Автоматически перезапускается при падении
+    build: 
+      context: ./backend
+    restart: unless-stopped
     depends_on:
       - db
     environment:
       TZ: Europe/Moscow 
+      NODE_ENV: production
       JWT_SECRET: your_very_strong_secret_here
       DB_HOST: db
+      DB_PORT: 5432
       DB_USER: myapp_user
       DB_PASSWORD: secure_password
       DB_NAME: myapp_db
-    ports:
-      - "3000:3000"
     networks:
       - app-network
 
-  # Nginx (фронтенд + прокси к бэкенду)
+  # Nginx с кастомным образом (без томов)
   nginx:
-    image: nginx:alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/usr/share/nginx/html
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
       - "80:80"
     networks:
       - app-network
-
-volumes:
-  postgres_data:
+    restart: unless-stopped
 
 networks:
   app-network:
     driver: bridge
-
-
-    
