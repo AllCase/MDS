@@ -15,7 +15,13 @@ app.get('/api/test', (req, res) => {
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5500', 'http://localhost:3000', 'http://localhost'],
+  origin: [
+    'http://localhost:5500',
+    'http://localhost:3000',
+    'http://localhost',
+    'https://allcase-mds-c073.twc1.net',
+    'http://allcase-mds-c073.twc1.net'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -122,6 +128,15 @@ function authenticateToken(req, res, next) {
     next();
   });
 }
+
+// Добавьте этот endpoint в server.js
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date()
+  });
+});
 
 // ==================================================================
 // Health check endpoint
