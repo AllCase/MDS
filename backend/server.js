@@ -36,15 +36,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Конфигурация подключения к PostgreSQL
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  user: process.env.DB_USER || 'myapp_user',
-  host: process.env.DB_HOST || 'amvera-takumi-cnpg-myappdb-rw',
-  database: process.env.DB_NAME || 'myapp_db',
-  password: process.env.DB_PASSWORD || 'secure_password',
-  port: 5432
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Добавьте проверку подключения к БД при запуске
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('Ошибка подключения к БД:', err);
+  } else {
+    console.log('Успешное подключение к облачной БД');
+    release();
+  }
 });
 
 // Диагностика временных зон
