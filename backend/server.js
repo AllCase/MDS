@@ -3,6 +3,8 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 
 // Создаем приложение Express
 const app = express();
@@ -36,22 +38,47 @@ app.use((req, res, next) => {
   next();
 });
 
+// Конфигурация SSL для PostgreSQL
+const sslConfig = process.env.DB_SSL === 'true' ? {
+  rejectUnauthorized: true,
+  ca: process.env.DB_SSL_CERT ? fs.readFileSync(process.env.DB_SSL_CERT).toString() : ''
+} : false;
+
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: sslConfig
 });
 
-// Добавьте проверку подключения к БД при запуске
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('Ошибка подключения к БД:', err);
-  } else {
+// Более надежная проверка подключения к БД
+const checkDatabaseConnection = async () => {
+  try {
+    const client = await pool.connect();
     console.log('Успешное подключение к облачной БД');
-    release();
+    client.release();
+    return true;
+  } catch (error) {
+    console.error('Ошибка подключения к БД:', error.message);
+
+    // Проверяем, связана ли ошибка с SSL
+    if (error.message.includes('SSL')) {
+      console.error('Проблема с SSL подключением. Убедитесь, что:');
+      console.error('1. SSL сертификат правильно загружен');
+      console.error('2. Настройки SSL в коде корректны');
+      console.error('3. БД разрешает SSL подключения');
+    }
+
+    return false;
+  }
+};
+
+// Запускаем проверку подключения
+checkDatabaseConnection().then(isConnected => {
+  if (!isConnected) {
+    console.log('Приложение запустится без подключения к БД');
   }
 });
 
