@@ -108,8 +108,13 @@ function authenticateToken(req, res, next) {
 // ==================================================================
 // Health check endpoint
 // ==================================================================
+// Добавьте этот endpoint в ваш server.js
 app.get('/health', (req, res) => {
-  res.status(200).send('OK');
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date(),
+    database: 'connected' // Добавьте проверку подключения к БД, если нужно
+  });
 });
 
 // ==================================================================
