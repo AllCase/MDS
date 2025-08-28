@@ -1,18 +1,27 @@
 FROM node:18
+
+# Установка сетевых утилит для диагностики
 RUN apt-get update && apt-get install -y iputils-ping curl
+
+# Рабочая директория
 WORKDIR /usr/src/app
-COPY backend/package*.json ./
+
+# Копируем package.json и package-lock.json
+COPY package*.json ./
+
+# Устанавливаем зависимости
 RUN npm install
-COPY backend/ ./
-COPY frontend/ ./frontend/
-EXPOSE 3000
-# Добавьте в конец Dockerfile, перед CMD
+
+# Копируем исходный код бэкенда
+COPY . .
+
+# Диагностика (оставьте только для отладки, в продакшене можно убрать)
 RUN echo "=== Проверка структуры файлов ===" && \
     pwd && \
-    ls -la && \
-    echo "=== Содержимое папки frontend ===" && \
-    ls -la frontend/ && \
-    echo "=== Поиск index.html ===" && \
-    find . -name "index.html" -type f
+    ls -la
 
+# Открываем порт
+EXPOSE 3000
+
+# Запускаем сервер
 CMD ["node", "server.js"]
