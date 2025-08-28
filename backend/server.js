@@ -37,8 +37,7 @@ app.use((req, res, next) => {
 
 // Конфигурация SSL для PostgreSQL
 const sslConfig = process.env.DB_SSL === 'true' ? {
-  rejectUnauthorized: true,
-  ca: fs.readFileSync('/app/root.crt').toString()
+  rejectUnauthorized: false  // Временно отключаем строгую проверку
 } : false;
 
 const pool = new Pool({
