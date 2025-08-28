@@ -9,25 +9,16 @@ const path = require('path');
 // Создаем приложение Express
 const app = express();
 
-
 app.get('/api/test', (req, res) => {
   res.send('Тестовый роут работает!');
 });
 
-
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000'],
-  credentials: true
-}));
-app.use(express.json());
-
-
-// Подключаем middleware
-app.use(cors({
-  origin: ['http://localhost:5500', 'http://localhost'], // Укажите порт вашего фронтенда
+  origin: ['http://localhost:5500', 'http://localhost:3000', 'http://localhost'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 app.options('*', cors());
 app.use(express.json());
@@ -41,7 +32,7 @@ app.use((req, res, next) => {
 // Конфигурация SSL для PostgreSQL
 const sslConfig = process.env.DB_SSL === 'true' ? {
   rejectUnauthorized: true,
-  ca: process.env.DB_SSL_CERT ? fs.readFileSync(process.env.DB_SSL_CERT).toString() : ''
+  ca: fs.readFileSync('/app/root.crt').toString()
 } : false;
 
 const pool = new Pool({
