@@ -9,19 +9,16 @@ const path = require('path');
 // Создаем приложение Express
 const app = express();
 
-app.get('/api/test', (req, res) => {
-  res.send('Тестовый роут работает!');
+// Простой тестовый endpoint
+app.get('/test', (req, res) => {
+  res.status(200).json({
+    message: 'Test endpoint is working',
+    timestamp: new Date()
+  });
 });
-
 // Middleware
 app.use(cors({
-  origin: [
-    'http://localhost:5500',
-    'http://localhost:3000',
-    'http://localhost',
-    'https://allcase-mds-c073.twc1.net',
-    'http://allcase-mds-c073.twc1.net'
-  ],
+  origin: '*',  // Разрешаем все домены
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -130,8 +127,8 @@ function authenticateToken(req, res, next) {
 
 // Добавьте этот endpoint в server.js
 app.get('/', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     message: 'Server is running',
     timestamp: new Date()
   });
