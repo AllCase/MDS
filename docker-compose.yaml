@@ -10,7 +10,7 @@ services:
       TZ: Europe/Moscow 
       NODE_ENV: production
       JWT_SECRET: your_very_strong_secret_here
-      DB_HOST: 176.53.168.66  # Публичный IP из вашего скрина
+      DB_HOST: 192.168.0.4  # Публичный IP из вашего скрина
       DB_PORT: 5432
       DB_USER: gen_user       # Пользователь из скрина
       DB_PASSWORD: YZ>|^DuMF+P7LX  # Замените на реальный пароль
