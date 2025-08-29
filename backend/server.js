@@ -703,26 +703,35 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
 app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log('Запрос организуемых мероприятий для пользователя:', userId);
+    console.log('🔄 Запрос организуемых мероприятий для пользователя:', userId);
+
+    // Проверяем существование пользователя
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (userCheck.rows.length === 0) {
+      console.error('❌ Пользователь не найден');
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
 
     const result = await pool.query(
-      `SELECT e.*, 
-              COUNT(ep.user_id) AS participants_count,
-              u.full_name AS organizer_name
+      `SELECT 
+        e.*,
+        COUNT(ep.user_id) AS participants_count,
+        u.full_name AS organizer_name
        FROM events e
        LEFT JOIN users u ON e.organizer_id = u.id
        LEFT JOIN event_participants ep ON e.id = ep.event_id
        WHERE e.organizer_id = $1 AND e.status = 'active'
        GROUP BY e.id, u.full_name
-       ORDER BY e.event_date DESC, e.event_time DESC`,
+       ORDER BY e.created_at DESC`,
       [userId]
     );
 
-    console.log('Найдено мероприятий:', result.rows.length);
-    console.log('Мероприятия:', result.rows);
+    console.log('✅ Найдено организуемых мероприятий:', result.rows.length);
+    console.log('📋 Мероприятия:', result.rows);
+
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения организуемых мероприятий:', error);
+    console.error('❌ Ошибка получения организуемых мероприятий:', error);
     res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
   }
 });
