@@ -5,6 +5,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 // Создаем приложение Express
 const app = express();
@@ -23,9 +24,9 @@ const sslConfig = process.env.DB_SSL === 'true' ? {
 app.use(cors({
   origin: [
     'http://localhost:5500',
-    'http://localhost:3000',
+    'http://localhost:3000', 
     'http://localhost',
-    'https://allcase-mds-c073.twc1.net'  // Ваш домен на хостинге
+    'https://allcase-mds-c073.twc1.net'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -49,14 +50,19 @@ app.use((req, res, next) => {
   next();
 });
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-  ssl: sslConfig
+const client = new Client({
+  user: 'gen_user',
+  host: '6efc77aa9da03edbf209d4a0.twc1.net',
+  database: 'default_db',
+  password: 'YZ>|^DuMF+P7LX',
+  port: 5432,
+  ssl: {
+    rejectUnauthorized: true,
+    ca: fs.readFileSync(path.join(os.homedir(), '.cloud-certs', 'root.crt'), 'utf-8')
+  }
 });
+
+client.connect();
 
 // Диагностика временных зон
 console.log(`Текущее время сервера (UTC): ${new Date()}`);
