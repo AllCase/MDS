@@ -5,6 +5,7 @@ services:
     build: ./backend
     restart: unless-stopped
     environment:
+      TZ: Europe/Moscow 
       NODE_ENV: production
       JWT_SECRET: your_very_strong_secret_here
       DB_HOST: 6efc77aa9da03edbf209d4a0.twc1.net
@@ -14,4 +15,4 @@ services:
       DB_NAME: default_db
       DB_SSL: "true"
     ports:
-      - "80:3000"  # Прямое пробрасывание порта
+      - "3000:3000"
