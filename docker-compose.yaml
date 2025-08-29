@@ -1,6 +1,17 @@
 version: '3.8'
 
 services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"  # Используем порт 8080 вместо 80
+    networks:
+      - app-network
+
   backend:
     build: ./backend
     restart: unless-stopped
@@ -14,5 +25,9 @@ services:
       DB_PASSWORD: YZ>|^DuMF+P7LX
       DB_NAME: default_db
       DB_SSL: "true"
-    ports:
-      - "3000:3000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
