@@ -15,11 +15,12 @@ RUN mkdir -p /app && \
     curl -o /app/root.crt "https://st.timeweb.com/cloud-static/ca.crt" && \
     chmod 0600 /app/root.crt
 
-# Копируем исходный код
+# Копируем backend код
 COPY . .
 
-# Открываем порт
+# Копируем фронтенд
+COPY ../frontend ./frontend
+
 EXPOSE 3000
 
-# Запускаем сервер
 CMD ["node", "server.js"]

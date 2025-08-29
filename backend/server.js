@@ -34,11 +34,13 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json());
 
-app.use(express.static('../frontend'));
 
-// Обслуживание фронтенда
+// Обслуживание статических файлов фронтенда
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+// Для всех GET запросов возвращаем index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
+  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
 // Логгирование всех запросов
