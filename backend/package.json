@@ -1,19 +1,19 @@
-{
-    "name": "myapp-backend",
-    "version": "1.0.0",
-    "main": "server.js",
-    "scripts": {
-        "start": "node server.js",
-        "dev": "nodemon server.js"
-    },
-    "dependencies": {
-        "express": "4.18.2",
-        "pg": "8.11.3",
-        "bcryptjs": "2.4.3",
-        "jsonwebtoken": "9.0.2",
-        "cors": "2.8.5"
-    },
-    "engines": {
-        "node": "18.x"
+    {
+        "name": "myapp-backend",
+        "version": "1.0.0",
+        "main": "server.js",
+        "scripts": {
+            "start": "node server.js",
+            "dev": "nodemon server.js"
+        },
+        "dependencies": {
+            "express": "4.18.2",
+            "pg": "8.11.3",
+            "bcryptjs": "2.4.3",
+            "jsonwebtoken": "9.0.2",
+            "cors": "2.8.5"
+        },
+        "engines": {
+            "node": "18.x"
+        }
     }
-}

@@ -18,7 +18,7 @@ RUN mkdir -p /app && \
 # Копируем backend код
 COPY . .
 
-# Копируем фронтенд
+# Копируем фронтенд из корневой директории
 COPY ../frontend ./frontend
 
 EXPOSE 3000

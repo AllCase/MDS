@@ -5,14 +5,9 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 
 // Создаем приложение Express
 const app = express();
-
-app.get('/api/test', (req, res) => {
-  res.send('Тестовый роут работает!');
-});
 
 // Конфигурация SSL для PostgreSQL
 const sslConfig = process.env.DB_SSL === 'true' ? {
@@ -20,11 +15,20 @@ const sslConfig = process.env.DB_SSL === 'true' ? {
   ca: fs.readFileSync('/app/root.crt').toString()
 } : false;
 
+const pool = new Pool({
+  user: process.env.DB_USER || 'gen_user',
+  host: process.env.DB_HOST || '6efc77aa9da03edbf209d4a0.twc1.net',
+  database: process.env.DB_NAME || 'default_db',
+  password: process.env.DB_PASSWORD || 'YZ>|^DuMF+P7LX',
+  port: process.env.DB_PORT || 5432,
+  ssl: sslConfig
+});
+
 // Подключаем middleware
 app.use(cors({
   origin: [
     'http://localhost:5500',
-    'http://localhost:3000', 
+    'http://localhost:3000',
     'http://localhost',
     'https://allcase-mds-c073.twc1.net'
   ],
@@ -35,59 +39,20 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json());
 
-
-// Обслуживание статических файлов фронтенда
-app.use(express.static(path.join(__dirname, 'frontend')));
-
-// Для всех GET запросов возвращаем index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
-});
-
 // Логгирование всех запросов
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
 
-const client = new Client({
-  user: 'gen_user',
-  host: '6efc77aa9da03edbf209d4a0.twc1.net',
-  database: 'default_db',
-  password: 'YZ>|^DuMF+P7LX',
-  port: 5432,
-  ssl: {
-    rejectUnauthorized: true,
-    ca: fs.readFileSync(path.join(os.homedir(), '.cloud-certs', 'root.crt'), 'utf-8')
-  }
+// API endpoints должны быть ДО статики
+app.get('/api/test', (req, res) => {
+  res.send('Тестовый роут работает!');
 });
 
-client.connect();
-
-// Диагностика временных зон
-console.log(`Текущее время сервера (UTC): ${new Date()}`);
-console.log(`Текущее время MSK: ${new Date(Date.now() + 3 * 60 * 60 * 1000)}`);
-pool.query("SELECT CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Moscow' AS msk_time", (err, res) => {
-  if (err) console.error('Ошибка запроса времени БД:', err);
-  else console.log('Время БД (MSK):', res.rows[0].msk_time);
-});
-
-// Проверка временной зоны в PostgreSQL
-pool.query('SELECT current_setting(\'TIMEZONE\') as tz', (err, res) => {
-  if (err) {
-    console.error('Ошибка проверки временной зоны PostgreSQL:', err);
-  } else {
-    console.log(`Временная зона PostgreSQL: ${res.rows[0].tz}`);
-  }
-});
-
-// Проверка временной зоны в PostgreSQL
-pool.query('SELECT current_setting(\'TIMEZONE\') as tz', (err, res) => {
-  if (err) {
-    console.error('Ошибка проверки временной зоны PostgreSQL:', err);
-  } else {
-    console.log(`Временная зона PostgreSQL: ${res.rows[0].tz}`);
-  }
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
 });
 
 // Константы для JWT
@@ -682,6 +647,14 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
     console.error('Ошибка регистрации на событие:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
+});
+
+// Обслуживание статических файлов фронтенда (должно быть ПОСЛЕ API)
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+// Для всех GET запросов возвращаем index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
 // ==================================================================
