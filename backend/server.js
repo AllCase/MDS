@@ -677,7 +677,9 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
 app.get('/api/events/participating', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const currentDate = new Date().toISOString().split('T')[0]; // Текущая дата в формате YYYY-MM-DD
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    console.log(`Запрос мероприятий для пользователя ${userId} начиная с даты ${currentDate}`);
 
     const result = await pool.query(
       `SELECT e.*, u.full_name AS organizer_name 
@@ -689,10 +691,11 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
       [userId, currentDate]
     );
 
+    console.log(`Найдено мероприятий: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения мероприятий для участия:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
   }
 });
 
@@ -717,11 +720,10 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
 
     console.log('Найдено мероприятий:', result.rows.length);
     console.log('Мероприятия:', result.rows);
-
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения организуемых мероприятий:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
   }
 });
 
