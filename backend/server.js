@@ -45,24 +45,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Обслуживание статических файлов фронтенда
-app.use(express.static(path.join(__dirname, 'frontend')));
-
-// Для всех GET запросов возвращаем index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
-});
-
-// API endpoints должны быть ДО статики
-app.get('/api/test', (req, res) => {
-  res.send('Тестовый роут работает!');
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
-
 // Константы для JWT
 const JWT_SECRET = process.env.JWT_SECRET || 'your_very_strong_secret_here';
 
@@ -73,12 +55,16 @@ function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('Auth header:', authHeader);
+  console.log('Token:', token);
+
   if (!token) {
     return res.status(401).json({ error: 'Требуется авторизация' });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
+      console.error('JWT verification error:', err);
       return res.status(403).json({ error: 'Неверный токен' });
     }
 
@@ -87,6 +73,19 @@ function authenticateToken(req, res, next) {
   });
 }
 
+// ==================================================================
+// API endpoints
+// ==================================================================
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// Test endpoint
+app.get('/api/test', (req, res) => {
+  res.send('Тестовый роут работает!');
+});
 
 // ==================================================================
 // Проверка доступности имени пользователя
@@ -231,14 +230,17 @@ app.post('/api/login', async (req, res) => {
 // ==================================================================
 app.get('/api/user', authenticateToken, async (req, res) => {
   try {
-    // Исправление: используем правильное название поля bio вместо about_me
+    console.log('User ID from token:', req.user.userId);
+
     const user = await pool.query(
       `SELECT 
         id, username, email, full_name, created_at,
         phone, birth_date, city, bio AS about_me 
        FROM users WHERE id = $1`,
-      [req.user.userId] // Важно: убедитесь, что здесь правильный ID
+      [req.user.userId]
     );
+
+    console.log('User found:', user.rows[0]);
 
     if (user.rows.length === 0) {
       return res.status(404).json({ error: 'Пользователь не найден' });
@@ -453,7 +455,6 @@ app.post('/api/events', authenticateToken, async (req, res) => {
   }
 });
 
-
 // ==================================================================
 // Получение списка событий (ОБНОВЛЕННАЯ ВЕРСИЯ)
 // ==================================================================
@@ -651,13 +652,26 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================================================================
+// Обслуживание статических файлов фронтенда
+// ==================================================================
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+// Для всех GET запросов возвращаем index.html (кроме API маршрутов)
+app.get('*', (req, res) => {
+  if (req.originalUrl.startsWith('/api/')) {
+    // Для API routes возвращаем 404
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
 
 // ==================================================================
-// Обработка 404 ошибок (добавьте этот middleware)
+// Обработка 404 ошибок для API
 // ==================================================================
-app.use((req, res) => {
-  console.log(`⚠️ Маршрут не найден: ${req.method} ${req.url}`);
-  res.status(404).json({ error: 'Ресурс не найден' });
+app.use('/api/*', (req, res) => {
+  console.log(`⚠️ API маршрут не найден: ${req.method} ${req.url}`);
+  res.status(404).json({ error: 'API endpoint not found' });
 });
 
 // ==================================================================
