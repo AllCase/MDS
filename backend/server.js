@@ -3,6 +3,8 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 
 // Создаем приложение Express
 const app = express();
@@ -11,11 +13,23 @@ app.get('/api/test', (req, res) => {
   res.send('Тестовый роут работает!');
 });
 
+// Конфигурация SSL для PostgreSQL
+const sslConfig = process.env.DB_SSL === 'true' ? {
+  rejectUnauthorized: true,
+  ca: fs.readFileSync('/app/root.crt').toString()
+} : false;
+
 // Подключаем middleware
 app.use(cors({
-  origin: ['http://localhost:5500', 'http://localhost'], // Укажите порт вашего фронтенда
+  origin: [
+    'http://localhost:5500',
+    'http://localhost:3000',
+    'http://localhost',
+    'https://allcase-mds-c073.twc1.net'  // Ваш домен на хостинге
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 app.options('*', cors());
 app.use(express.json());
@@ -26,13 +40,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Конфигурация подключения к PostgreSQL
 const pool = new Pool({
-  user: process.env.DB_USER || 'myapp_user',
-  host: process.env.DB_HOST || 'db',
-  database: process.env.DB_NAME || 'myapp_db',
-  password: process.env.DB_PASSWORD || 'secure_password',
-  port: 5432
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+  ssl: sslConfig
 });
 
 // Диагностика временных зон
