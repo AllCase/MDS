@@ -653,6 +653,111 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
 });
 
 // ==================================================================
+// НОВЫЕ ENDPOINTS ДЛЯ МОИХ МЕРОПРИЯТИЙ
+// ==================================================================
+
+// Получение мероприятий, в которых пользователь участвует
+app.get('/api/events/participating', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const currentDate = new Date().toISOString().split('T')[0]; // Текущая дата в формате YYYY-MM-DD
+
+    const result = await pool.query(
+      `SELECT e.*, u.full_name AS organizer_name 
+       FROM events e
+       JOIN event_participants ep ON e.id = ep.event_id
+       JOIN users u ON e.organizer_id = u.id
+       WHERE ep.user_id = $1 AND e.event_date >= $2 AND e.status = 'active'
+       ORDER BY e.event_date, e.event_time`,
+      [userId, currentDate]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения мероприятий для участия:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Получение мероприятий, которые пользователь организует
+app.get('/api/events/organizing', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const currentDate = new Date().toISOString().split('T')[0]; // Текущая дата в формате YYYY-MM-DD
+
+    const result = await pool.query(
+      `SELECT e.*, u.full_name AS organizer_name, 
+              COUNT(ep.user_id) AS participants_count
+       FROM events e
+       JOIN users u ON e.organizer_id = u.id
+       LEFT JOIN event_participants ep ON e.id = ep.event_id
+       WHERE e.organizer_id = $1 AND e.event_date >= $2 AND e.status = 'active'
+       GROUP BY e.id, u.full_name
+       ORDER BY e.event_date, e.event_time`,
+      [userId, currentDate]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения организуемых мероприятий:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Получение прошедших мероприятий
+app.get('/api/events/past', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const currentDate = new Date().toISOString().split('T')[0]; // Текущая дата в формате YYYY-MM-DD
+
+    const result = await pool.query(
+      `SELECT e.*, u.full_name AS organizer_name 
+       FROM events e
+       JOIN users u ON e.organizer_id = u.id
+       WHERE (e.organizer_id = $1 OR e.id IN (
+         SELECT event_id FROM event_participants WHERE user_id = $1
+       )) AND e.event_date < $2 AND e.status = 'active'
+       ORDER BY e.event_date DESC, e.event_time DESC`,
+      [userId, currentDate]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения прошедших мероприятий:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Отмена участия в событии
+app.delete('/api/events/:id/participate', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    // Проверяем, участвует ли пользователь в событии
+    const participation = await pool.query(
+      'SELECT 1 FROM event_participants WHERE event_id = $1 AND user_id = $2',
+      [id, userId]
+    );
+
+    if (participation.rows.length === 0) {
+      return res.status(404).json({ error: 'Вы не участвуете в этом событии' });
+    }
+
+    // Удаляем участие
+    await pool.query(
+      'DELETE FROM event_participants WHERE event_id = $1 AND user_id = $2',
+      [id, userId]
+    );
+
+    res.json({ success: true, message: 'Участие в событии отменено' });
+  } catch (error) {
+    console.error('Ошибка отмены участия в событии:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ==================================================================
 // Обслуживание статических файлов фронтенда
 // ==================================================================
 app.use(express.static(path.join(__dirname, 'frontend')));
