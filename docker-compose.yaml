@@ -5,31 +5,28 @@ services:
     build: ./backend
     restart: unless-stopped
     environment:
-      TZ: Europe/Moscow 
       NODE_ENV: production
       JWT_SECRET: your_very_strong_secret_here
-      DB_HOST: 6efc77aa9da03edbf209d4a0.twc1.net  # Домен из вашего скриншота
+      DB_HOST: 6efc77aa9da03edbf209d4a0.twc1.net
       DB_PORT: 5432
       DB_USER: gen_user
-      DB_PASSWORD: YZ>|^DuMF+P7LX  # Ваш настоящий пароль
+      DB_PASSWORD: YZ>|^DuMF+P7LX
       DB_NAME: default_db
-      DB_SSL: true
+      DB_SSL: "true"
     ports:
       - "3000:3000"
-    networks:
-      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   nginx:
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
+    image: nginx:alpine
     depends_on:
       - backend
     ports:
       - "80:80"
-    networks:
-      - app-network
-
-networks:
-  app-network:
-    driver: bridge
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
