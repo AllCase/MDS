@@ -26,13 +26,34 @@ const pool = new Pool({
 
 // Подключаем middleware
 app.use(cors({
-  origin: '*', // Разрешаем все домены
+  origin: [
+    'https://allcase-mds-c073.twc1.net',
+    'http://localhost:5500',
+    'http://localhost:3000',
+    'http://localhost'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
 // Явная обработка preflight запросов
 app.options('*', cors());
+
+// Обработка preflight запросов
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', 'https://allcase-mds-c073.twc1.net');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(express.json());
 
 // Логгирование всех запросов
