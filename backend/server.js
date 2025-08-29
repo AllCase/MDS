@@ -700,19 +700,23 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
 app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const currentDate = new Date().toISOString().split('T')[0]; // Текущая дата в формате YYYY-MM-DD
+    console.log('Запрос организуемых мероприятий для пользователя:', userId);
 
     const result = await pool.query(
-      `SELECT e.*, u.full_name AS organizer_name, 
-              COUNT(ep.user_id) AS participants_count
+      `SELECT e.*, 
+              COUNT(ep.user_id) AS participants_count,
+              u.full_name AS organizer_name
        FROM events e
-       JOIN users u ON e.organizer_id = u.id
+       LEFT JOIN users u ON e.organizer_id = u.id
        LEFT JOIN event_participants ep ON e.id = ep.event_id
-       WHERE e.organizer_id = $1 AND e.event_date >= $2 AND e.status = 'active'
+       WHERE e.organizer_id = $1 AND e.status = 'active'
        GROUP BY e.id, u.full_name
-       ORDER BY e.event_date, e.event_time`,
-      [userId, currentDate]
+       ORDER BY e.event_date DESC, e.event_time DESC`,
+      [userId]
     );
+
+    console.log('Найдено мероприятий:', result.rows.length);
+    console.log('Мероприятия:', result.rows);
 
     res.json(result.rows);
   } catch (error) {
