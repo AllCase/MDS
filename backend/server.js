@@ -34,6 +34,13 @@ app.use(cors({
 app.options('*', cors());
 app.use(express.json());
 
+app.use(express.static('../frontend'));
+
+// Обслуживание фронтенда
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
+});
+
 // Логгирование всех запросов
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
