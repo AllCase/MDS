@@ -3,25 +3,19 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
-const path = require('path');
 
 // Создаем приложение Express
 const app = express();
 
-// Простой тестовый endpoint
-app.get('/test', (req, res) => {
-  res.status(200).json({
-    message: 'Test endpoint is working',
-    timestamp: new Date()
-  });
+app.get('/api/test', (req, res) => {
+  res.send('Тестовый роут работает!');
 });
-// Middleware
+
+// Подключаем middleware
 app.use(cors({
-  origin: '*',  // Разрешаем все домены
+  origin: ['http://localhost:5500', 'http://localhost'], // Укажите порт вашего фронтенда
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.options('*', cors());
 app.use(express.json());
@@ -32,47 +26,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// Конфигурация SSL для PostgreSQL
-const sslConfig = process.env.DB_SSL === 'true' ? {
-  rejectUnauthorized: false  // Временно отключаем строгую проверку
-} : false;
-
+// Конфигурация подключения к PostgreSQL
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
-  ssl: sslConfig
-});
-
-// Более надежная проверка подключения к БД
-const checkDatabaseConnection = async () => {
-  try {
-    const client = await pool.connect();
-    console.log('Успешное подключение к облачной БД');
-    client.release();
-    return true;
-  } catch (error) {
-    console.error('Ошибка подключения к БД:', error.message);
-
-    // Проверяем, связана ли ошибка с SSL
-    if (error.message.includes('SSL')) {
-      console.error('Проблема с SSL подключением. Убедитесь, что:');
-      console.error('1. SSL сертификат правильно загружен');
-      console.error('2. Настройки SSL в коде корректны');
-      console.error('3. БД разрешает SSL подключения');
-    }
-
-    return false;
-  }
-};
-
-// Запускаем проверку подключения
-checkDatabaseConnection().then(isConnected => {
-  if (!isConnected) {
-    console.log('Приложение запустится без подключения к БД');
-  }
+  user: process.env.DB_USER || 'myapp_user',
+  host: process.env.DB_HOST || 'db',
+  database: process.env.DB_NAME || 'myapp_db',
+  password: process.env.DB_PASSWORD || 'secure_password',
+  port: 5432
 });
 
 // Диагностика временных зон
@@ -125,25 +85,11 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// Добавьте этот endpoint в server.js
-app.get('/', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    message: 'Server is running',
-    timestamp: new Date()
-  });
-});
-
 // ==================================================================
 // Health check endpoint
 // ==================================================================
-// Добавьте этот endpoint в ваш server.js
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date(),
-    database: 'connected' // Добавьте проверку подключения к БД, если нужно
-  });
+  res.status(200).send('OK');
 });
 
 // ==================================================================
@@ -721,6 +667,6 @@ app.use((req, res) => {
 // Запуск сервера
 // ==================================================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);
 });

@@ -1,7 +1,11 @@
+# Используем официальный образ Node.js
 FROM node:18
 
+
+# Установка сетевых утилит для диагностики
 RUN apt-get update && apt-get install -y iputils-ping curl
 
+# Рабочая директория
 WORKDIR /usr/src/app
 
 # Копируем package.json и package-lock.json
@@ -10,11 +14,8 @@ COPY package*.json ./
 # Устанавливаем зависимости
 RUN npm install
 
-# Копируем исходный код
+# Копируем остальные файлы
 COPY . .
-
-# Копируем SSL сертификат
-COPY root.crt /app/root.crt
 
 # Открываем порт
 EXPOSE 3000
