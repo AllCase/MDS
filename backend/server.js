@@ -26,16 +26,12 @@ const pool = new Pool({
 
 // Подключаем middleware
 app.use(cors({
-  origin: [
-    'http://localhost:5500',
-    'http://localhost:3000',
-    'http://localhost',
-    'https://allcase-mds-c073.twc1.net'
-  ],
+  origin: '*', // Разрешаем все домены
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true
 }));
+// Явная обработка preflight запросов
 app.options('*', cors());
 app.use(express.json());
 
