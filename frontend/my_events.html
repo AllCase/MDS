@@ -277,19 +277,22 @@
                                 <div class="mb-3">
                                     <label class="form-label">Вид спорта</label>
                                     <div class="form-check">
-                                        <input class="form-check-input sport-filter" type="checkbox" value="running" id="running-filter" checked>
+                                        <input class="form-check-input sport-filter" type="checkbox" value="running"
+                                            id="running-filter" checked>
                                         <label class="form-check-label" for="running-filter">
                                             🏃 Бег
                                         </label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input sport-filter" type="checkbox" value="cycling" id="cycling-filter" checked>
+                                        <input class="form-check-input sport-filter" type="checkbox" value="cycling"
+                                            id="cycling-filter" checked>
                                         <label class="form-check-label" for="cycling-filter">
                                             🚴 Велоспорт
                                         </label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input sport-filter" type="checkbox" value="football" id="football-filter">
+                                        <input class="form-check-input sport-filter" type="checkbox" value="football"
+                                            id="football-filter">
                                         <label class="form-check-label" for="football-filter">
                                             ⚽ Футбол
                                         </label>
@@ -377,20 +380,23 @@
                                 <div class="mb-3">
                                     <label class="form-label">Тип мероприятия</label>
                                     <div class="form-check">
-                                        <input class="form-check-input type-filter" type="checkbox" value="training" id="training-filter" checked>
+                                        <input class="form-check-input type-filter" type="checkbox" value="training"
+                                            id="training-filter" checked>
                                         <label class="form-check-label" for="training-filter">
                                             Тренировки
                                         </label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input type-filter" type="checkbox" value="competition" id="competition-filter">
+                                        <input class="form-check-input type-filter" type="checkbox" value="competition"
+                                            id="competition-filter">
                                         <label class="form-check-label" for="competition-filter">
                                             Соревнования
                                         </label>
                                     </div>
                                 </div>
 
-                                <button class="btn btn-info w-100 text-white" id="applyOrganizingFilters">Применить фильтры</button>
+                                <button class="btn btn-info w-100 text-white" id="applyOrganizingFilters">Применить
+                                    фильтры</button>
                             </div>
                         </div>
                     </div>
@@ -469,19 +475,22 @@
                                 <div class="mb-3">
                                     <label class="form-label">Вид спорта</label>
                                     <div class="form-check">
-                                        <input class="form-check-input past-sport-filter" type="checkbox" value="running" id="past-running-filter" checked>
+                                        <input class="form-check-input past-sport-filter" type="checkbox"
+                                            value="running" id="past-running-filter" checked>
                                         <label class="form-check-label" for="past-running-filter">
                                             🏃 Бег
                                         </label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input past-sport-filter" type="checkbox" value="cycling" id="past-cycling-filter" checked>
+                                        <input class="form-check-input past-sport-filter" type="checkbox"
+                                            value="cycling" id="past-cycling-filter" checked>
                                         <label class="form-check-label" for="past-cycling-filter">
                                             🚴 Велоспорт
                                         </label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input past-sport-filter" type="checkbox" value="football" id="past-football-filter">
+                                        <input class="form-check-input past-sport-filter" type="checkbox"
+                                            value="football" id="past-football-filter">
                                         <label class="form-check-label" for="past-football-filter">
                                             ⚽ Футбол
                                         </label>
@@ -565,7 +574,12 @@
         // Функция для получения мероприятий
         async function fetchEvents(endpoint) {
             const token = localStorage.getItem('authToken');
-            if (!token) return [];
+            console.log('Токен:', token ? 'Присутствует' : 'Отсутствует');
+
+            if (!token) {
+                console.error('Токен не найден');
+                return [];
+            }
 
             try {
                 const response = await fetch(endpoint, {
@@ -574,10 +588,19 @@
                     }
                 });
 
+                console.log('Статус ответа:', response.status);
+
                 if (response.ok) {
                     return await response.json();
+                } else if (response.status === 401) {
+                    console.error('Ошибка авторизации');
+                    localStorage.removeItem('authToken');
+                    window.location.href = 'aut.html';
+                    return [];
+                } else {
+                    console.error('Ошибка сервера:', response.status);
+                    return [];
                 }
-                return [];
             } catch (error) {
                 console.error('Ошибка получения мероприятий:', error);
                 return [];
@@ -613,7 +636,7 @@
                 const eventDate = new Date(event.event_date);
                 const now = new Date();
                 const isPast = eventDate < now;
-                
+
                 eventsHTML += `
                     <div class="col">
                         <div class="card h-100 event-card">
@@ -671,25 +694,39 @@
         async function loadParticipatingEvents() {
             const container = document.getElementById('participatingEventsContainer');
             container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-            
+
             const events = await fetchEvents('/api/events/participating');
             displayEvents(events, 'participatingEventsContainer', 'participating');
         }
 
         // Функция для загрузки мероприятий, которые пользователь организует
         async function loadOrganizingEvents() {
+            console.log('Загрузка организуемых мероприятий...');
             const container = document.getElementById('organizingEventsContainer');
             container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-            
-            const events = await fetchEvents('/api/events/organizing');
-            displayEvents(events, 'organizingEventsContainer', 'organizing');
+
+            try {
+                const events = await fetchEvents('/api/events/organizing');
+                console.log('Получены организуемые мероприятия:', events);
+                displayEvents(events, 'organizingEventsContainer', 'organizing');
+            } catch (error) {
+                console.error('Ошибка загрузки организуемых мероприятий:', error);
+                // Показываем сообщение об ошибке
+                container.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    Ошибка загрузки мероприятий: ${error.message}
+                </div>
+            </div>
+        `;
+            }
         }
 
         // Функция для загрузки прошедших мероприятий
         async function loadPastEvents() {
             const container = document.getElementById('pastEventsContainer');
             container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-            
+
             const events = await fetchEvents('/api/events/past');
             displayEvents(events, 'pastEventsContainer', 'past');
         }
@@ -697,7 +734,7 @@
         // Функции для работы с мероприятиями
         async function leaveEvent(eventId) {
             if (!confirm('Вы уверены, что хотите отменить участие в этом мероприятии?')) return;
-            
+
             const token = localStorage.getItem('authToken');
             try {
                 const response = await fetch(`/api/events/${eventId}/participate`, {
@@ -706,7 +743,7 @@
                         'Authorization': `Bearer ${token}`
                     }
                 });
-                
+
                 if (response.ok) {
                     alert('Участие отменено');
                     loadParticipatingEvents();
@@ -721,7 +758,7 @@
 
         async function deleteEvent(eventId) {
             if (!confirm('Вы уверены, что хотите удалить это мероприятие?')) return;
-            
+
             const token = localStorage.getItem('authToken');
             try {
                 const response = await fetch(`/api/events/${eventId}`, {
@@ -730,7 +767,7 @@
                         'Authorization': `Bearer ${token}`
                     }
                 });
-                
+
                 if (response.ok) {
                     alert('Мероприятие удалено');
                     loadOrganizingEvents();
@@ -803,15 +840,15 @@
             }
 
             // Обработка фильтров
-            document.getElementById('applyFilters')?.addEventListener('click', function() {
+            document.getElementById('applyFilters')?.addEventListener('click', function () {
                 loadParticipatingEvents();
             });
 
-            document.getElementById('applyOrganizingFilters')?.addEventListener('click', function() {
+            document.getElementById('applyOrganizingFilters')?.addEventListener('click', function () {
                 loadOrganizingEvents();
             });
 
-            document.getElementById('applyPastFilters')?.addEventListener('click', function() {
+            document.getElementById('applyPastFilters')?.addEventListener('click', function () {
                 loadPastEvents();
             });
         });
