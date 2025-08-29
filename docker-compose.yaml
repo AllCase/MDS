@@ -3,16 +3,14 @@ version: '3.8'
 services:
   backend:
     build: ./backend
-    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Используйте порт, отличный от 80/443
     environment:
-      TZ: Europe/Moscow 
       NODE_ENV: production
-      JWT_SECRET: your_very_strong_secret_here
-      DB_HOST: 6efc77aa9da03edbf209d4a0.twc1.net
+      DB_HOST: 176.53.160.66  # Публичный IP БД
       DB_PORT: 5432
       DB_USER: gen_user
       DB_PASSWORD: YZ>|^DuMF+P7LX
       DB_NAME: default_db
-      DB_SSL: "true"
-    ports:
-      - "3000:3000"
+      DB_SSL: "false"  # Временно отключите SSL
+    # Не используйте volumes, networks или другие расширенные настройки
