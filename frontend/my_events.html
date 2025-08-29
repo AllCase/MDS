@@ -574,6 +574,7 @@
         // Функция для получения мероприятий
         async function fetchEvents(endpoint) {
             const token = localStorage.getItem('authToken');
+            console.log('Запрос к:', endpoint);
             console.log('Токен:', token ? 'Присутствует' : 'Отсутствует');
 
             if (!token) {
@@ -591,14 +592,17 @@
                 console.log('Статус ответа:', response.status);
 
                 if (response.ok) {
-                    return await response.json();
+                    const data = await response.json();
+                    console.log('Получены данные:', data);
+                    return data;
                 } else if (response.status === 401) {
                     console.error('Ошибка авторизации');
                     localStorage.removeItem('authToken');
                     window.location.href = 'aut.html';
                     return [];
                 } else {
-                    console.error('Ошибка сервера:', response.status);
+                    const errorText = await response.text();
+                    console.error('Ошибка сервера:', response.status, errorText);
                     return [];
                 }
             } catch (error) {
