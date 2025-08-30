@@ -679,7 +679,21 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     const currentDate = new Date().toISOString().split('T')[0];
 
-    console.log(`Запрос мероприятий для пользователя ${userId} начиная с даты ${currentDate}`);
+    console.log(`Запрос мероприятий для участия пользователя ${userId}`);
+
+    // Проверяем существование таблицы event_participants
+    const tableExists = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'event_participants'
+      )
+    `);
+
+    if (!tableExists.rows[0].exists) {
+      console.error('Таблица event_participants не существует');
+      return res.json([]); // Возвращаем пустой массив вместо ошибки
+    }
 
     const result = await pool.query(
       `SELECT e.*, u.full_name AS organizer_name 
@@ -691,11 +705,12 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
       [userId, currentDate]
     );
 
-    console.log(`Найдено мероприятий: ${result.rows.length}`);
+    console.log(`Найдено мероприятий для участия: ${result.rows.length}`);
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения мероприятий для участия:', error);
-    res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
+    // В случае ошибки возвращаем пустой массив вместо 500 ошибки
+    res.json([]);
   }
 });
 
@@ -703,36 +718,24 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
 app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log('🔄 Запрос организуемых мероприятий для пользователя:', userId);
-
-    // Проверяем существование пользователя
-    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
-    if (userCheck.rows.length === 0) {
-      console.error('❌ Пользователь не найден');
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
+    console.log('Запрос организуемых мероприятий для пользователя:', userId);
 
     const result = await pool.query(
-      `SELECT 
-        e.*,
-        COUNT(ep.user_id) AS participants_count,
-        u.full_name AS organizer_name
+      `SELECT e.*, 
+              u.full_name AS organizer_name
        FROM events e
-       LEFT JOIN users u ON e.organizer_id = u.id
-       LEFT JOIN event_participants ep ON e.id = ep.event_id
+       JOIN users u ON e.organizer_id = u.id
        WHERE e.organizer_id = $1 AND e.status = 'active'
-       GROUP BY e.id, u.full_name
-       ORDER BY e.created_at DESC`,
+       ORDER BY e.event_date DESC, e.event_time DESC`,
       [userId]
     );
 
-    console.log('✅ Найдено организуемых мероприятий:', result.rows.length);
-    console.log('📋 Мероприятия:', result.rows);
-
+    console.log('Найдено организуемых мероприятий:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('❌ Ошибка получения организуемых мероприятий:', error);
-    res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
+    console.error('Ошибка получения организуемых мероприятий:', error);
+    // В случае ошибки возвращаем пустой массив вместо 500 ошибки
+    res.json([]);
   }
 });
 
@@ -740,23 +743,29 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
 app.get('/api/events/past', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const currentDate = new Date().toISOString().split('T')[0]; // Текущая дата в формате YYYY-MM-DD
+    const currentDate = new Date().toISOString().split('T')[0];
 
+    console.log(`Запрос прошедших мероприятий для пользователя ${userId}`);
+
+    // Упрощенный запрос без сложных JOIN
     const result = await pool.query(
       `SELECT e.*, u.full_name AS organizer_name 
        FROM events e
        JOIN users u ON e.organizer_id = u.id
-       WHERE (e.organizer_id = $1 OR e.id IN (
-         SELECT event_id FROM event_participants WHERE user_id = $1
+       WHERE (e.organizer_id = $1 OR EXISTS (
+         SELECT 1 FROM event_participants ep 
+         WHERE ep.event_id = e.id AND ep.user_id = $1
        )) AND e.event_date < $2 AND e.status = 'active'
        ORDER BY e.event_date DESC, e.event_time DESC`,
       [userId, currentDate]
     );
 
+    console.log('Найдено прошедших мероприятий:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения прошедших мероприятий:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    // В случае ошибки возвращаем пустой массив вместо 500 ошибки
+    res.json([]);
   }
 });
 
