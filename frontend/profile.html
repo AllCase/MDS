@@ -242,6 +242,7 @@
             <h1 class="mt-3 mb-0" id="profileUsername">@username</h1>
             <!-- Изменено: добавлен элемент для полного имени -->
             <p class="fs-5 text-light mb-1" id="profileFullName">Имя Фамилия</p>
+            <p class="fs-5 text-light mb-4" id="profileCity">Москва, Россия</p>
         </div>
     </div>
 
@@ -528,7 +529,6 @@
                 }
 
                 // Для полей, которых может не быть в ответе
-                document.getElementById('profileLocation').textContent = user.location || 'Город не указан';
                 document.getElementById('profileCity').textContent = user.city || 'Не указан';
                 document.getElementById('profileBio').textContent = user.about_me || 'Пользователь еще не добавил информацию о себе';
                 document.getElementById('profilePhone').textContent = user.phone || 'Не указан';
