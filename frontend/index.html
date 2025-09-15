@@ -97,21 +97,21 @@
             <a class="navbar-brand" href="index.html">
                 <img src="logo.jpg" alt="MDS" height="60">
             </a>
-            <!-- Навигация -->
-            <div class="collapse navbar-collapse">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="index.html">Главная</a>
+                        <a class="nav-link" href="index.html">Главная</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="my_events.html">Мои мероприятия</a>
+                        <a class="nav-link active" href="my_events.html">Мои мероприятия</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#">Календарь</a>
                     </li>
                 </ul>
-
-                <!-- Поиск и профиль -->
                 <div class="d-flex align-items-center">
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
@@ -121,12 +121,12 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="profile.html">Мой профиль</a></li>
-                            <li><a class="dropdown-item" href="my_events.html">Мои мероприятия</a></li>
+                            <li><a class="dropdown-item active" href="my_events.html">Мои мероприятия</a></li>
                             <li><a class="dropdown-item" href="settings.html">Настройки</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item text-danger" href="#" id="logoutLink">Выйти</a></li>
+                            <li><a class="dropdown-item text-danger" href="aut.html">Выйти</a></li>
                         </ul>
                     </div>
                 </div>
