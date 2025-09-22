@@ -606,7 +606,7 @@
                     if (!isValidEventDateTime(eventDate, eventTime)) {
                         // Если дата/время в прошлом
                         validationAlert.classList.remove('d-none');
-                        validationMessage.textContent = 'Нельзя создавать события в прошедшем времени. Выберите будущую дату и время.';
+                        validationMessage.textContent = 'Нельзя создавать события в прошедшем времени или незаблаговременно. Выберите будущую дату или время. Время можно выбрать минимум за 3 часа до начала события от времени создания объявления.';
 
                         dateInput.classList.add('is-invalid');
                         timeInput.classList.add('is-invalid');
