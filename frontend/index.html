@@ -126,7 +126,7 @@
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item text-danger" href="aut.html">Выйти</a></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="logoutLink">Выйти</a></li>
                         </ul>
                     </div>
                 </div>
@@ -263,6 +263,8 @@
         // Функция для выхода из системы
         function logout() {
             localStorage.removeItem('authToken');
+            // Очищаем также другие данные пользователя, если они есть
+            sessionStorage.clear();
             window.location.href = 'aut.html';
         }
 
@@ -570,11 +572,14 @@
                 if (e.key === 'Enter') applyFilters();
             });
 
-            // Обработчик выхода
-            document.getElementById('logoutLink').addEventListener('click', (e) => {
-                e.preventDefault();
-                logout();
-            });
+            // Обработчик выхода - исправленная версия
+            const logoutLink = document.getElementById('logoutLink');
+            if (logoutLink) {
+                logoutLink.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    logout();
+                });
+            }
 
             // Обработчик кнопок "Участвовать"
             document.addEventListener('click', async function (e) {
