@@ -534,6 +534,57 @@
                 updatePreview();
             });
 
+            // Функция проверки даты и времени
+            function isValidEventDateTime(eventDate, eventTime) {
+                const now = new Date();
+
+                // Создаем объект даты события (учитываем MSK UTC+3)
+                const eventDateTime = new Date(`${eventDate}T${eventTime}:00+03:00`);
+
+                // Получаем текущее время в MSK (UTC+3)
+                const mskOffset = 3 * 60 * 60 * 1000; // MSK UTC+3 в миллисекундах
+                const nowMsk = new Date(now.getTime() + mskOffset);
+
+                console.log('Текущее время MSK:', nowMsk.toISOString());
+                console.log('Время события:', eventDateTime.toISOString());
+
+                // Проверяем, что событие в будущем
+                return eventDateTime > nowMsk;
+            }
+
+            // Динамическая проверка даты/времени при изменении полей
+            function setupDateTimeValidation() {
+                const dateInput = document.getElementById('eventDate');
+                const timeInput = document.getElementById('eventTime');
+                const submitBtn = document.querySelector('button[type="submit"]');
+
+                function validateDateTime() {
+                    const eventDate = dateInput.value;
+                    const eventTime = timeInput.value;
+
+                    if (eventDate && eventTime) {
+                        if (!isValidEventDateTime(eventDate, eventTime)) {
+                            submitBtn.disabled = true;
+                            submitBtn.title = 'Нельзя создавать события в прошедшем времени';
+                            submitBtn.classList.add('btn-secondary');
+                            submitBtn.classList.remove('btn-success');
+                        } else {
+                            submitBtn.disabled = false;
+                            submitBtn.title = '';
+                            submitBtn.classList.remove('btn-secondary');
+                            submitBtn.classList.add('btn-success');
+                        }
+                    }
+                }
+
+                dateInput.addEventListener('change', validateDateTime);
+                timeInput.addEventListener('change', validateDateTime);
+                timeInput.addEventListener('input', validateDateTime);
+
+                // Инициализируем проверку при загрузке
+                validateDateTime();
+            }
+
             // 4. Обновление предпросмотра при изменениях
             document.querySelectorAll('#eventForm input, #eventForm select, #eventForm textarea').forEach(element => {
                 if (element.id !== 'eventPrice') {
@@ -557,19 +608,28 @@
                     return;
                 }
 
+                // ВАЛИДАЦИЯ ДАТЫ И ВРЕМЕНИ
+                const eventDate = document.getElementById('eventDate').value;
+                const eventTime = document.getElementById('eventTime').value;
+
+                if (!isValidEventDateTime(eventDate, eventTime)) {
+                    alert('Нельзя создавать события в прошедшем времени. Пожалуйста, выберите будущую дату и время.');
+                    return;
+                }
+
                 // Сбор данных
                 const eventData = {
                     title: document.getElementById('eventTitle').value,
                     description: document.getElementById('eventDescription').value,
-                    event_date: document.getElementById('eventDate').value,
-                    event_time: document.getElementById('eventTime').value,
+                    event_date: eventDate,
+                    event_time: eventTime,
                     sport_type: document.getElementById('sportType').value,
                     event_type: document.getElementById('eventType').value,
                     max_participants: document.getElementById('maxParticipants').value || null,
                     price: parseFloat(document.getElementById('eventPrice').value) || 0,
                     location: document.getElementById('eventLocation').value,
                     age_restriction: parseInt(document.getElementById('ageRestriction').value) || 0,
-                    organizer_id: user.id // Используем ID из данных пользователя
+                    organizer_id: user.id
                 };
 
                 // Показ загрузки
@@ -597,6 +657,9 @@
                 localStorage.removeItem('authToken');
                 window.location.href = 'aut.html';
             });
+
+            // 7. Настройка валидации даты/времени
+            setupDateTimeValidation();
 
             // Инициализация предпросмотра
             updatePreview();
