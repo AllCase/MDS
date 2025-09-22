@@ -133,6 +133,25 @@
             background-color: #dee2e6;
             z-index: 1;
         }
+
+        .is-invalid {
+            border-color: #dc3545 !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 3.6.4.4.4-.4'/%3e%3cpath d='M6 7v1'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+
+        .is-invalid:focus {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+        }
+
+        .alert {
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 
@@ -219,6 +238,14 @@
                             <div class="col-md-6">
                                 <label for="eventTime" class="form-label fw-bold">Время</label>
                                 <input type="time" class="form-control" id="eventTime" required>
+                            </div>
+                            <!-- Блок уведомления о валидации даты -->
+                            <div class="col-12 mt-2">
+                                <div id="datetimeValidationAlert" class="alert alert-warning d-none align-items-center"
+                                    role="alert">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <span id="datetimeValidationMessage"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -557,23 +584,47 @@
                 const dateInput = document.getElementById('eventDate');
                 const timeInput = document.getElementById('eventTime');
                 const submitBtn = document.querySelector('button[type="submit"]');
+                const validationAlert = document.getElementById('datetimeValidationAlert');
+                const validationMessage = document.getElementById('datetimeValidationMessage');
 
                 function validateDateTime() {
                     const eventDate = dateInput.value;
                     const eventTime = timeInput.value;
 
-                    if (eventDate && eventTime) {
-                        if (!isValidEventDateTime(eventDate, eventTime)) {
-                            submitBtn.disabled = true;
-                            submitBtn.title = 'Нельзя создавать события в прошедшем времени';
-                            submitBtn.classList.add('btn-secondary');
-                            submitBtn.classList.remove('btn-success');
-                        } else {
-                            submitBtn.disabled = false;
-                            submitBtn.title = '';
-                            submitBtn.classList.remove('btn-secondary');
-                            submitBtn.classList.add('btn-success');
-                        }
+                    if (!eventDate || !eventTime) {
+                        // Если одно из полей пустое
+                        validationAlert.classList.add('d-none');
+                        dateInput.classList.remove('is-invalid');
+                        timeInput.classList.remove('is-invalid');
+                        submitBtn.disabled = true;
+                        submitBtn.title = 'Заполните дату и время события';
+                        submitBtn.classList.add('btn-secondary');
+                        submitBtn.classList.remove('btn-success');
+                        return;
+                    }
+
+                    if (!isValidEventDateTime(eventDate, eventTime)) {
+                        // Если дата/время в прошлом
+                        validationAlert.classList.remove('d-none');
+                        validationMessage.textContent = 'Нельзя создавать события в прошедшем времени. Выберите будущую дату и время.';
+
+                        dateInput.classList.add('is-invalid');
+                        timeInput.classList.add('is-invalid');
+
+                        submitBtn.disabled = true;
+                        submitBtn.title = 'Исправьте дату и время события';
+                        submitBtn.classList.add('btn-secondary');
+                        submitBtn.classList.remove('btn-success');
+                    } else {
+                        // Если все корректно
+                        validationAlert.classList.add('d-none');
+                        dateInput.classList.remove('is-invalid');
+                        timeInput.classList.remove('is-invalid');
+
+                        submitBtn.disabled = false;
+                        submitBtn.title = 'Нажмите для публикации события';
+                        submitBtn.classList.remove('btn-secondary');
+                        submitBtn.classList.add('btn-success');
                     }
                 }
 
@@ -583,6 +634,28 @@
 
                 // Инициализируем проверку при загрузке
                 validateDateTime();
+            }
+
+            // Установка минимальной даты (сегодня)
+            function setMinDate() {
+                const dateInput = document.getElementById('eventDate');
+                const now = new Date();
+                const today = now.toISOString().split('T')[0];
+                dateInput.min = today;
+
+                // Установка минимального времени для сегодняшней даты
+                const timeInput = document.getElementById('eventTime');
+                dateInput.addEventListener('change', function () {
+                    if (this.value === today) {
+                        // Если выбрана сегодняшняя дата, устанавливаем минимальное время
+                        const now = new Date();
+                        const currentHour = now.getHours().toString().padStart(2, '0');
+                        const currentMinute = (now.getMinutes() + 1).toString().padStart(2, '0'); // +1 минута чтобы избежать округления
+                        timeInput.min = `${currentHour}:${currentMinute}`;
+                    } else {
+                        timeInput.min = '00:00';
+                    }
+                });
             }
 
             // 4. Обновление предпросмотра при изменениях
@@ -660,6 +733,9 @@
 
             // 7. Настройка валидации даты/времени
             setupDateTimeValidation();
+
+            // 8. Установка минимальной даты
+            setMinDate();
 
             // Инициализация предпросмотра
             updatePreview();
