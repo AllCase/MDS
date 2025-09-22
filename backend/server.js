@@ -370,7 +370,7 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
 });
 
 // ==================================================================
-// Создание нового события (исправленная версия)
+// Создание нового события (с валидацией даты)
 // ==================================================================
 app.post('/api/events', authenticateToken, async (req, res) => {
   console.log('✅ Запрос на создание события получен');
@@ -392,6 +392,22 @@ app.post('/api/events', authenticateToken, async (req, res) => {
 
     console.log(`Время события от клиента: ${event_time}`);
 
+    // ВАЛИДАЦИЯ ДАТЫ И ВРЕМЕНИ НА СЕРВЕРЕ
+    const isValidDateTime = (eventDate, eventTime) => {
+      const now = new Date();
+      const eventDateTime = new Date(`${eventDate}T${eventTime}:00+03:00`);
+      const mskOffset = 3 * 60 * 60 * 1000;
+      const nowMsk = new Date(now.getTime() + mskOffset);
+
+      return eventDateTime > nowMsk;
+    };
+
+    if (!isValidDateTime(event_date, event_time)) {
+      return res.status(400).json({
+        error: 'Нельзя создавать события в прошедшем времени'
+      });
+    }
+
     // Функция конвертации времени
     const convertTimeToMsk = (timeStr) => {
       const [hours, minutes] = timeStr.split(':').map(Number);
@@ -399,7 +415,7 @@ app.post('/api/events', authenticateToken, async (req, res) => {
       date.setHours(hours);
       date.setMinutes(minutes);
 
-      const mskOffset = 3 * 60 * 60 * 1000; // MSK UTC+3
+      const mskOffset = 3 * 60 * 60 * 1000;
       const mskTime = new Date(date.getTime() + mskOffset);
 
       return mskTime.toISOString().substring(11, 19);
@@ -431,20 +447,20 @@ app.post('/api/events', authenticateToken, async (req, res) => {
     // Вставляем событие в базу
     const result = await pool.query(
       `INSERT INTO events (
-        title,
-        description,
-        event_date,
-        event_time,
-        sport_type,
-        event_type,
-        max_participants,
-        price,
-        location,
-        age_restriction,
-        organizer_id,
-        status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active')
-      RETURNING id`,
+                title,
+                description,
+                event_date,
+                event_time,
+                sport_type,
+                event_type,
+                max_participants,
+                price,
+                location,
+                age_restriction,
+                organizer_id,
+                status
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active')
+            RETURNING id`,
       [
         title,
         description,
