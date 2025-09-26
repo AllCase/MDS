@@ -775,6 +775,72 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================================================================
+// ТЕСТОВЫЕ ENDPOINT'Ы ДЛЯ ДИАГНОСТИКИ
+// ==================================================================
+
+// Простой тест аутентификации
+app.get('/api/test/auth', authenticateToken, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: 'Аутентификация работает',
+      userId: req.user.userId
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка аутентификации', message: error.message });
+  }
+});
+
+// Тест самого простого запроса к events
+app.get('/api/test/events-simple', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, title FROM events LIMIT 5');
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка простого запроса', message: error.message });
+  }
+});
+
+// Тест JOIN запроса
+app.get('/api/test/events-join', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+            SELECT e.id, e.title, u.full_name 
+            FROM events e 
+            JOIN users u ON e.organizer_id = u.id 
+            LIMIT 5
+        `);
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка JOIN запроса', message: error.message });
+  }
+});
+
+// Тест подзапроса
+app.get('/api/test/events-subquery', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+            SELECT e.*, 
+                   (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participants_count
+            FROM events e 
+            LIMIT 5
+        `);
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка подзапроса', message: error.message });
+  }
+});
+
 // Проверка подключения к БД
 app.get('/api/debug/db-test', authenticateToken, async (req, res) => {
   try {
