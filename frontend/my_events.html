@@ -192,6 +192,16 @@
                 </a>
             </div>
         </div>
+
+        <!-- Добавьте этот блок после заголовка "Мои мероприятия" -->
+        <div class="alert alert-info">
+            <h6>Диагностика</h6>
+            <button class="btn btn-sm btn-outline-primary me-2" onclick="testDB()">Тест БД</button>
+            <button class="btn btn-sm btn-outline-secondary me-2" onclick="testUserEvents()">Тест событий
+                пользователя</button>
+            <button class="btn btn-sm btn-outline-success me-2" onclick="testTables()">Тест таблиц</button>
+        </div>
+
         <!-- Вкладки -->
         <ul class="nav nav-tabs mb-4" id="eventsTab" role="tablist">
             <li class="nav-item" role="presentation">
@@ -516,16 +526,6 @@
             </div>
         </div>
     </div>
-    <div class="alert alert-info d-none" id="debugPanel">
-        <h6>Панель отладки</h6>
-        <button class="btn btn-sm btn-outline-primary me-2" onclick="testAllEvents()">Тест: Все события</button>
-        <button class="btn btn-sm btn-outline-secondary me-2" onclick="testOrganizerEvents()">Тест: События
-            организатора</button>
-        <button class="btn btn-sm btn-outline-success me-2" onclick="loadParticipatingEvents()">Перезагрузить:
-            Участвую</button>
-        <button class="btn btn-sm btn-outline-warning" onclick="loadOrganizingEvents()">Перезагрузить:
-            Организую</button>
-    </div>
 
     <!-- Футер -->
     <footer class="bg-dark text-white py-4 mt-5">
@@ -559,33 +559,33 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Функции для отладки
-        async function testAllEvents() {
+        // Функции для диагностики
+        async function testDB() {
             try {
-                const events = await fetchEvents('/api/events/debug/all');
-                console.log('Все события:', events);
-                alert(`Найдено ${events.length} событий`);
+                const result = await fetchEvents('/api/debug/db-test');
+                alert('База данных доступна: ' + JSON.stringify(result));
             } catch (error) {
-                console.error('Ошибка теста:', error);
-                alert('Ошибка: ' + error.message);
+                alert('Ошибка БД: ' + error.message);
             }
         }
 
-        async function testOrganizerEvents() {
+        async function testUserEvents() {
             try {
                 const user = await fetchUserData();
-                const events = await fetchEvents(`/api/events/debug/organizer/${user.id}`);
-                console.log('События организатора:', events);
-                alert(`Пользователь ${user.full_name} организовал ${events.length} событий`);
+                const result = await fetchEvents(`/api/debug/user-events/${user.id}`);
+                alert(`События пользователя: ${result.organizingCount} организатор, ${result.participatingCount} участник`);
             } catch (error) {
-                console.error('Ошибка теста:', error);
                 alert('Ошибка: ' + error.message);
             }
         }
 
-        // Показать панель отладки в development режиме
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            document.getElementById('debugPanel').classList.remove('d-none');
+        async function testTables() {
+            try {
+                const result = await fetchEvents('/api/debug/tables');
+                alert('Таблицы: ' + result.tables.map(t => t.table_name).join(', '));
+            } catch (error) {
+                alert('Ошибка: ' + error.message);
+            }
         }
         // Функция для получения данных пользователя
         async function fetchUserData() {
@@ -609,13 +609,13 @@
             }
         }
 
-        // Улучшенная функция для получения мероприятий
+        // Улучшенная функция для получения мероприятий с детальной информацией об ошибках
         async function fetchEvents(endpoint) {
             const token = localStorage.getItem('authToken');
-            console.log('Запрос к:', endpoint);
+            console.log('🔄 Запрос к:', endpoint);
 
             if (!token) {
-                console.error('Токен не найден');
+                console.error('❌ Токен не найден');
                 throw new Error('Требуется авторизация');
             }
 
@@ -627,19 +627,34 @@
                     }
                 });
 
-                console.log('Статус ответа:', response.status);
+                console.log('📊 Статус ответа:', response.status);
 
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('Получены данные:', data);
-                    return data;
-                } else {
-                    const errorData = await response.json().catch(() => ({ error: 'Неизвестная ошибка сервера' }));
-                    console.error('Ошибка сервера:', response.status, errorData);
-                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                const responseText = await response.text();
+                console.log('📄 Текст ответа:', responseText);
+
+                if (!response.ok) {
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(responseText);
+                    } catch (e) {
+                        errorData = { error: responseText || 'Неизвестная ошибка сервера' };
+                    }
+
+                    console.error('❌ Ошибка сервера:', response.status, errorData);
+                    throw new Error(errorData.details || errorData.error || `HTTP ${response.status}`);
                 }
+
+                try {
+                    const data = JSON.parse(responseText);
+                    console.log('✅ Получены данные:', data);
+                    return data;
+                } catch (e) {
+                    console.error('❌ Ошибка парсинга JSON:', e);
+                    throw new Error('Неверный формат ответа сервера');
+                }
+
             } catch (error) {
-                console.error('Ошибка получения мероприятий:', error);
+                console.error('❌ Ошибка получения мероприятий:', error);
                 throw error;
             }
         }
