@@ -686,20 +686,25 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
 });
 
 // ==================================================================
-// ИСПРАВЛЕННЫЕ ENDPOINTS (используем те же запросы, что и в диагностике)
+// ИСПРАВЛЕННЫЕ ENDPOINTS НА ОСНОВЕ ВАШЕЙ БД
 // ==================================================================
 
-// Получение мероприятий, в которых пользователь участвует (РАБОЧАЯ ВЕРСИЯ)
+// Получение мероприятий, в которых пользователь участвует
 app.get('/api/events/participating', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log('🔄 Запрос мероприятий для участия пользователя:', userId);
 
-    // ТОЧНО ТАКОЙ ЖЕ ЗАПРОС КАК В ДИАГНОСТИЧЕСКОМ ENDPOINT'е
     const result = await pool.query(
-      `SELECT e.* FROM events e 
-             JOIN event_participants ep ON e.id = ep.event_id 
-             WHERE ep.user_id = $1`,
+      `SELECT 
+        e.*, 
+        u.full_name as organizer_name,
+        (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participants_count
+       FROM events e 
+       JOIN event_participants ep ON e.id = ep.event_id 
+       JOIN users u ON e.organizer_id = u.id
+       WHERE ep.user_id = $1 AND e.status = 'active'
+       ORDER BY e.event_date, e.event_time`,
       [userId]
     );
 
@@ -709,21 +714,26 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
     console.error('❌ Ошибка получения мероприятий для участия:', error);
     res.status(500).json({
       error: 'Ошибка сервера',
-      message: error.message,
-      details: 'Ошибка в запросе participating events'
+      message: error.message
     });
   }
 });
 
-// Получение мероприятий, которые пользователь организует (РАБОЧАЯ ВЕРСИЯ)
+// Получение мероприятий, которые пользователь организует
 app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log('🔄 Запрос организуемых мероприятий для пользователя:', userId);
 
-    // ТОЧНО ТАКОЙ ЖЕ ЗАПРОС КАК В ДИАГНОСТИЧЕСКОМ ENDPOINT'е
     const result = await pool.query(
-      'SELECT * FROM events WHERE organizer_id = $1',
+      `SELECT 
+        e.*, 
+        u.full_name as organizer_name,
+        (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participants_count
+       FROM events e 
+       JOIN users u ON e.organizer_id = u.id
+       WHERE e.organizer_id = $1 AND e.status = 'active'
+       ORDER BY e.event_date, e.event_time`,
       [userId]
     );
 
@@ -733,25 +743,33 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
     console.error('❌ Ошибка получения организуемых мероприятий:', error);
     res.status(500).json({
       error: 'Ошибка сервера',
-      message: error.message,
-      details: 'Ошибка в запросе organizing events'
+      message: error.message
     });
   }
 });
 
-// Получение прошедших мероприятий (УПРОЩЕННАЯ РАБОЧАЯ ВЕРСИЯ)
+// Получение прошедших мероприятий (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 app.get('/api/events/past', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log('🔄 Запрос прошедших мероприятий для пользователя:', userId);
 
-    // Упрощенный запрос на основе рабочих диагностических запросов
     const result = await pool.query(
-      `SELECT e.* FROM events e
-             WHERE (e.organizer_id = $1 OR e.id IN (
-                 SELECT event_id FROM event_participants WHERE user_id = $1
-             ))
-             AND e.event_date < CURRENT_DATE`,
+      `SELECT 
+        e.*, 
+        u.full_name as organizer_name,
+        (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participants_count,
+        CASE 
+          WHEN e.organizer_id = $1 THEN 'organizer'
+          ELSE 'participant'
+        END as user_role
+       FROM events e
+       JOIN users u ON e.organizer_id = u.id
+       WHERE (e.organizer_id = $1 OR e.id IN (
+         SELECT event_id FROM event_participants WHERE user_id = $1
+       ))
+       AND (e.event_date < CURRENT_DATE OR e.status IN ('completed', 'cancelled'))
+       ORDER BY e.event_date DESC, e.event_time DESC`,
       [userId]
     );
 
@@ -761,11 +779,10 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
     console.error('❌ Ошибка получения прошедших мероприятий:', error);
     res.status(500).json({
       error: 'Ошибка сервера',
-      message: error.message,
-      details: 'Ошибка в запросе past events'
+      message: error.message
     });
   }
-}); 
+});
 
 // ==================================================================
 // ТЕСТОВЫЕ ENDPOINT'Ы ДЛЯ ДИАГНОСТИКИ
