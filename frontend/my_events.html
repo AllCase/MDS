@@ -192,6 +192,24 @@
                 </a>
             </div>
         </div>
+        <!-- Диагностическая панель -->
+        <div class="alert alert-info mb-4">
+            <h6>🔧 Диагностика endpoint'ов</h6>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-primary" onclick="testEndpoint('/api/test/auth')">Тест
+                    аутентификации</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="testEndpoint('/api/test/events-simple')">Тест
+                    простого запроса</button>
+                <button class="btn btn-sm btn-outline-success" onclick="testEndpoint('/api/test/events-join')">Тест
+                    JOIN</button>
+                <button class="btn btn-sm btn-outline-warning" onclick="testEndpoint('/api/test/events-subquery')">Тест
+                    подзапроса</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="testEndpoint('/api/events/participating')">Тест
+                    participating</button>
+                <button class="btn btn-sm btn-outline-info" onclick="testEndpoint('/api/events/organizing')">Тест
+                    organizing</button>
+            </div>
+        </div>
         <!-- Вкладки -->
         <ul class="nav nav-tabs mb-4" id="eventsTab" role="tablist">
             <li class="nav-item" role="presentation">
@@ -549,6 +567,18 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Функция для тестирования endpoint'ов
+        async function testEndpoint(endpoint) {
+            try {
+                console.log(`🔄 Тестируем endpoint: ${endpoint}`);
+                const result = await fetchEvents(endpoint);
+                console.log(`✅ ${endpoint}:`, result);
+                alert(`✅ ${endpoint} работает!\nДанные: ${JSON.stringify(result).substring(0, 200)}...`);
+            } catch (error) {
+                console.error(`❌ ${endpoint}:`, error);
+                alert(`❌ ${endpoint} ошибка: ${error.message}`);
+            }
+        }
         // Функции для диагностики
         async function testDB() {
             try {
@@ -804,15 +834,19 @@
             container.innerHTML = eventsHTML;
         }
 
-        // ПОСТОЯННОЕ РЕШЕНИЕ: Используем основные endpoint'ы
+        // ВРЕМЕННОЕ РЕШЕНИЕ: Используем диагностические endpoint'ы которые точно работают
         async function loadParticipatingEvents() {
             const container = document.getElementById('participatingEventsContainer');
 
             try {
                 container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
 
-                // ПОСТОЯННО: используем основной endpoint
-                const events = await fetchEvents('/api/events/participating');
+                // Используем рабочий диагностический endpoint
+                const user = await fetchUserData();
+                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
+                const events = debugData.participating;
+
+                console.log('📋 Данные для участия:', events);
                 displayEvents(events, 'participatingEventsContainer', 'participating');
             } catch (error) {
                 console.error('Ошибка загрузки мероприятий для участия:', error);
@@ -833,8 +867,12 @@
             try {
                 container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
 
-                // ПОСТОЯННО: используем основной endpoint
-                const events = await fetchEvents('/api/events/organizing');
+                // Используем рабочий диагностический endpoint
+                const user = await fetchUserData();
+                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
+                const events = debugData.organizing;
+
+                console.log('📋 Данные для организатора:', events);
                 displayEvents(events, 'organizingEventsContainer', 'organizing');
             } catch (error) {
                 console.error('Ошибка загрузки организуемых мероприятий:', error);
@@ -855,9 +893,17 @@
             try {
                 container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
 
-                // ПОСТОЯННО: используем основной endpoint
-                const events = await fetchEvents('/api/events/past');
-                displayEvents(events, 'pastEventsContainer', 'past');
+                // Используем рабочий диагностический endpoint и фильтруем на клиенте
+                const user = await fetchUserData();
+                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
+                const allEvents = debugData.organizing.concat(debugData.participating);
+
+                // Фильтруем прошедшие мероприятия на клиенте
+                const currentDate = new Date().toISOString().split('T')[0];
+                const pastEvents = allEvents.filter(event => event.event_date < currentDate);
+
+                console.log('📋 Данные для прошедших мероприятий:', pastEvents);
+                displayEvents(pastEvents, 'pastEventsContainer', 'past');
             } catch (error) {
                 console.error('Ошибка загрузки прошедших мероприятий:', error);
                 container.innerHTML = `
