@@ -699,7 +699,6 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     console.log('🔄 Запрос мероприятий для участия пользователя:', userId);
 
-    // ТОЧНО ТАКОЙ ЖЕ ЗАПРОС КАК В ДИАГНОСТИКЕ
     const result = await pool.query(
       `SELECT DISTINCT e.*, u.full_name AS organizer_name
              FROM events e
@@ -727,7 +726,6 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     console.log('🔄 Запрос организуемых мероприятий для пользователя:', userId);
 
-    // ТОЧНО ТАКОЙ ЖЕ ЗАПРОС КАК В ДИАГНОСТИКЕ
     const result = await pool.query(
       `SELECT e.*, u.full_name AS organizer_name
              FROM events e
@@ -754,7 +752,6 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     console.log('🔄 Запрос прошедших мероприятий для пользователя:', userId);
 
-    // Упрощенный запрос на основе рабочих диагностических запросов
     const result = await pool.query(
       `SELECT e.*, u.full_name AS organizer_name
              FROM events e
