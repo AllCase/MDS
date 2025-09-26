@@ -690,17 +690,18 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
 // ==================================================================
 
 // ==================================================================
-// ИСПРАВЛЕННЫЕ ENDPOINT'Ы НА ОСНОВЕ РАБОЧИХ ДИАГНОСТИЧЕСКИХ ЗАПРОСОВ
+// УПРОЩЕННЫЕ РАБОЧИЕ ENDPOINT'Ы (на основе диагностических запросов)
 // ==================================================================
 
-// Получение мероприятий, в которых пользователь участвует (РАБОЧАЯ ВЕРСИЯ)
+// Получение мероприятий, в которых пользователь участвует (УПРОЩЕННАЯ РАБОЧАЯ ВЕРСИЯ)
 app.get('/api/events/participating', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log(`Запрос мероприятий для участия пользователя ${userId}`);
+    console.log('🔄 Запрос мероприятий для участия пользователя:', userId);
 
+    // ТОЧНО ТАКОЙ ЖЕ ЗАПРОС КАК В ДИАГНОСТИКЕ
     const result = await pool.query(
-      `SELECT e.*, u.full_name AS organizer_name
+      `SELECT DISTINCT e.*, u.full_name AS organizer_name
              FROM events e
              JOIN event_participants ep ON e.id = ep.event_id
              JOIN users u ON e.organizer_id = u.id
@@ -709,23 +710,24 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
       [userId]
     );
 
-    console.log(`Найдено мероприятий для участия: ${result.rows.length}`);
+    console.log('✅ Найдено мероприятий для участия:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения мероприятий для участия:', error);
+    console.error('❌ Ошибка получения мероприятий для участия:', error);
     res.status(500).json({
-      error: 'Ошибка сервера при получении мероприятий для участия',
-      details: error.message
+      error: 'Ошибка сервера',
+      message: error.message
     });
   }
 });
 
-// Получение мероприятий, которые пользователь организует (РАБОЧАЯ ВЕРСИЯ)
+// Получение мероприятий, которые пользователь организует (УПРОЩЕННАЯ РАБОЧАЯ ВЕРСИЯ)
 app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log('Запрос организуемых мероприятий для пользователя:', userId);
+    console.log('🔄 Запрос организуемых мероприятий для пользователя:', userId);
 
+    // ТОЧНО ТАКОЙ ЖЕ ЗАПРОС КАК В ДИАГНОСТИКЕ
     const result = await pool.query(
       `SELECT e.*, u.full_name AS organizer_name
              FROM events e
@@ -735,13 +737,13 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
       [userId]
     );
 
-    console.log('Найдено организуемых мероприятий:', result.rows.length);
+    console.log('✅ Найдено организуемых мероприятий:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения организуемых мероприятий:', error);
+    console.error('❌ Ошибка получения организуемых мероприятий:', error);
     res.status(500).json({
-      error: 'Ошибка сервера при получении организуемых мероприятий',
-      details: error.message
+      error: 'Ошибка сервера',
+      message: error.message
     });
   }
 });
@@ -750,12 +752,9 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
 app.get('/api/events/past', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log(`Запрос прошедших мероприятий для пользователя ${userId}`);
+    console.log('🔄 Запрос прошедших мероприятий для пользователя:', userId);
 
-    // Получаем текущую дату
-    const currentDate = new Date().toISOString().split('T')[0];
-
-    // Упрощенный запрос: события, где пользователь организатор или участник, и дата уже прошла
+    // Упрощенный запрос на основе рабочих диагностических запросов
     const result = await pool.query(
       `SELECT e.*, u.full_name AS organizer_name
              FROM events e
@@ -763,18 +762,18 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
              WHERE (e.organizer_id = $1 OR e.id IN (
                  SELECT event_id FROM event_participants WHERE user_id = $1
              ))
-             AND e.event_date < $2
+             AND e.event_date < CURRENT_DATE
              ORDER BY e.event_date DESC`,
-      [userId, currentDate]
+      [userId]
     );
 
-    console.log('Найдено прошедших мероприятий:', result.rows.length);
+    console.log('✅ Найдено прошедших мероприятий:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('Ошибка получения прошедших мероприятий:', error);
+    console.error('❌ Ошибка получения прошедших мероприятий:', error);
     res.status(500).json({
-      error: 'Ошибка сервера при получении прошедших мероприятий',
-      details: error.message
+      error: 'Ошибка сервера',
+      message: error.message
     });
   }
 });
