@@ -516,6 +516,16 @@
             </div>
         </div>
     </div>
+    <div class="alert alert-info d-none" id="debugPanel">
+        <h6>Панель отладки</h6>
+        <button class="btn btn-sm btn-outline-primary me-2" onclick="testAllEvents()">Тест: Все события</button>
+        <button class="btn btn-sm btn-outline-secondary me-2" onclick="testOrganizerEvents()">Тест: События
+            организатора</button>
+        <button class="btn btn-sm btn-outline-success me-2" onclick="loadParticipatingEvents()">Перезагрузить:
+            Участвую</button>
+        <button class="btn btn-sm btn-outline-warning" onclick="loadOrganizingEvents()">Перезагрузить:
+            Организую</button>
+    </div>
 
     <!-- Футер -->
     <footer class="bg-dark text-white py-4 mt-5">
@@ -549,6 +559,34 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Функции для отладки
+        async function testAllEvents() {
+            try {
+                const events = await fetchEvents('/api/events/debug/all');
+                console.log('Все события:', events);
+                alert(`Найдено ${events.length} событий`);
+            } catch (error) {
+                console.error('Ошибка теста:', error);
+                alert('Ошибка: ' + error.message);
+            }
+        }
+
+        async function testOrganizerEvents() {
+            try {
+                const user = await fetchUserData();
+                const events = await fetchEvents(`/api/events/debug/organizer/${user.id}`);
+                console.log('События организатора:', events);
+                alert(`Пользователь ${user.full_name} организовал ${events.length} событий`);
+            } catch (error) {
+                console.error('Ошибка теста:', error);
+                alert('Ошибка: ' + error.message);
+            }
+        }
+
+        // Показать панель отладки в development режиме
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            document.getElementById('debugPanel').classList.remove('d-none');
+        }
         // Функция для получения данных пользователя
         async function fetchUserData() {
             const token = localStorage.getItem('authToken');
@@ -571,21 +609,21 @@
             }
         }
 
-        // Функция для получения мероприятий
+        // Улучшенная функция для получения мероприятий
         async function fetchEvents(endpoint) {
             const token = localStorage.getItem('authToken');
             console.log('Запрос к:', endpoint);
-            console.log('Токен:', token ? 'Присутствует' : 'Отсутствует');
 
             if (!token) {
                 console.error('Токен не найден');
-                return [];
+                throw new Error('Требуется авторизация');
             }
 
             try {
                 const response = await fetch(endpoint, {
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
                 });
 
@@ -595,19 +633,14 @@
                     const data = await response.json();
                     console.log('Получены данные:', data);
                     return data;
-                } else if (response.status === 401) {
-                    console.error('Ошибка авторизации');
-                    localStorage.removeItem('authToken');
-                    window.location.href = 'aut.html';
-                    return [];
                 } else {
-                    const errorText = await response.text();
-                    console.error('Ошибка сервера:', response.status, errorText);
-                    return [];
+                    const errorData = await response.json().catch(() => ({ error: 'Неизвестная ошибка сервера' }));
+                    console.error('Ошибка сервера:', response.status, errorData);
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
                 }
             } catch (error) {
                 console.error('Ошибка получения мероприятий:', error);
-                return [];
+                throw error;
             }
         }
 
@@ -743,66 +776,43 @@
             container.innerHTML = eventsHTML;
         }
 
-        // Функция для загрузки мероприятий, в которых пользователь участвует
+        // Упрощенная функция для загрузки мероприятий, в которых пользователь участвует
         async function loadParticipatingEvents() {
             const container = document.getElementById('participatingEventsContainer');
-            container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-
-            const events = await fetchEvents('/api/events/participating');
-            displayEvents(events, 'participatingEventsContainer', 'participating');
-        }
-
-        // Функция для загрузки мероприятий, которые пользователь организует (ИСПРАВЛЕННАЯ)
-        async function loadOrganizingEvents() {
-            console.log('🔄 Загрузка организуемых мероприятий...');
-            const container = document.getElementById('organizingEventsContainer');
-
-            // Показываем индикатор загрузки
-            container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
 
             try {
-                const token = localStorage.getItem('authToken');
-                if (!token) {
-                    throw new Error('Токен авторизации не найден');
-                }
+                container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
 
-                // Получаем ID текущего пользователя
-                const userResponse = await fetch('/api/user', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!userResponse.ok) {
-                    throw new Error('Ошибка получения данных пользователя');
-                }
-
-                const user = await userResponse.json();
-                console.log('👤 Текущий пользователь:', user.id, user.full_name);
-
-                // Загружаем события, которые организовал пользователь
-                const eventsResponse = await fetch('/api/events/organizing', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!eventsResponse.ok) {
-                    throw new Error('Ошибка загрузки мероприятий');
-                }
-
-                const events = await eventsResponse.json();
-                console.log('📋 Получены организуемые мероприятия:', events);
-
-                // Отображаем события
-                displayOrganizingEvents(events, 'organizingEventsContainer');
-
+                const events = await fetchEvents('/api/events/participating');
+                displayEvents(events, 'participatingEventsContainer', 'participating');
             } catch (error) {
-                console.error('❌ Ошибка загрузки организуемых мероприятий:', error);
+                console.error('Ошибка загрузки мероприятий для участия:', error);
                 container.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-danger">
-                    Ошибка загрузки мероприятий: ${error.message}
+                    Не удалось загрузить мероприятия: ${error.message}
+                    <br><small>Попробуйте обновить страницу или обратитесь к администратору</small>
+                </div>
+            </div>
+        `;
+            }
+        }
+
+        // Упрощенная функция для загрузки мероприятий, которые пользователь организует
+        async function loadOrganizingEvents() {
+            const container = document.getElementById('organizingEventsContainer');
+
+            try {
+                container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
+
+                const events = await fetchEvents('/api/events/organizing');
+                displayEvents(events, 'organizingEventsContainer', 'organizing');
+            } catch (error) {
+                console.error('Ошибка загрузки организуемых мероприятий:', error);
+                container.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    Не удалось загрузить ваши мероприятия: ${error.message}
                     <br><small>Попробуйте обновить страницу</small>
                 </div>
             </div>
