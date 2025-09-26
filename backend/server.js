@@ -730,7 +730,9 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
   }
 });
 
-// Получение мероприятий, которые пользователь организует
+// ==================================================================
+// Получение мероприятий, которые пользователь организует (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// ==================================================================
 app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -738,11 +740,19 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
 
     const result = await pool.query(
       `SELECT e.*, 
-              u.full_name AS organizer_name
-       FROM events e
-       JOIN users u ON e.organizer_id = u.id
-       WHERE e.organizer_id = $1 AND e.status = 'active'
-       ORDER BY e.event_date DESC, e.event_time DESC`,
+                u.full_name AS organizer_name,
+                (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) AS participants_count
+             FROM events e
+             JOIN users u ON e.organizer_id = u.id
+             WHERE e.organizer_id = $1
+             ORDER BY 
+                 CASE 
+                     WHEN e.event_date < CURRENT_DATE THEN 1
+                     WHEN e.event_date = CURRENT_DATE AND e.event_time < CURRENT_TIME THEN 1
+                     ELSE 0 
+                 END,
+                 e.event_date ASC, 
+                 e.event_time ASC`,
       [userId]
     );
 
@@ -750,8 +760,7 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения организуемых мероприятий:', error);
-    // В случае ошибки возвращаем пустой массив вместо 500 ошибки
-    res.json([]);
+    res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
