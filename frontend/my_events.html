@@ -611,13 +611,26 @@
             }
         }
 
-        // Функция для форматирования даты
+        // Функция для форматирования даты (УЛУЧШЕННАЯ)
         function formatDate(dateString) {
             if (!dateString) return 'Дата не указана';
 
             try {
-                const options = { day: 'numeric', month: 'long', year: 'numeric' };
-                return new Date(dateString).toLocaleDateString('ru-RU', options);
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString;
+
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+
+                if (date.toDateString() === today.toDateString()) {
+                    return 'Сегодня';
+                } else if (date.toDateString() === tomorrow.toDateString()) {
+                    return 'Завтра';
+                } else {
+                    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                    return date.toLocaleDateString('ru-RU', options);
+                }
             } catch (error) {
                 console.error('Ошибка форматирования даты:', error);
                 return dateString;
@@ -739,27 +752,189 @@
             displayEvents(events, 'participatingEventsContainer', 'participating');
         }
 
-        // Функция для загрузки мероприятий, которые пользователь организует
+        // Функция для загрузки мероприятий, которые пользователь организует (ИСПРАВЛЕННАЯ)
         async function loadOrganizingEvents() {
-            console.log('Загрузка организуемых мероприятий...');
+            console.log('🔄 Загрузка организуемых мероприятий...');
             const container = document.getElementById('organizingEventsContainer');
+
+            // Показываем индикатор загрузки
             container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
 
             try {
-                const events = await fetchEvents('/api/events/organizing');
-                console.log('Получены организуемые мероприятия:', events);
-                displayEvents(events, 'organizingEventsContainer', 'organizing');
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    throw new Error('Токен авторизации не найден');
+                }
+
+                // Получаем ID текущего пользователя
+                const userResponse = await fetch('/api/user', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!userResponse.ok) {
+                    throw new Error('Ошибка получения данных пользователя');
+                }
+
+                const user = await userResponse.json();
+                console.log('👤 Текущий пользователь:', user.id, user.full_name);
+
+                // Загружаем события, которые организовал пользователь
+                const eventsResponse = await fetch('/api/events/organizing', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!eventsResponse.ok) {
+                    throw new Error('Ошибка загрузки мероприятий');
+                }
+
+                const events = await eventsResponse.json();
+                console.log('📋 Получены организуемые мероприятия:', events);
+
+                // Отображаем события
+                displayOrganizingEvents(events, 'organizingEventsContainer');
+
             } catch (error) {
-                console.error('Ошибка загрузки организуемых мероприятий:', error);
-                // Показываем сообщение об ошибке
+                console.error('❌ Ошибка загрузки организуемых мероприятий:', error);
                 container.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-danger">
                     Ошибка загрузки мероприятий: ${error.message}
+                    <br><small>Попробуйте обновить страницу</small>
                 </div>
             </div>
         `;
             }
+        }
+
+        // Функция для отображения организуемых мероприятий
+        function displayOrganizingEvents(events, containerId) {
+            const container = document.getElementById(containerId);
+
+            if (!events || events.length === 0) {
+                container.innerHTML = `
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="bi bi-megaphone"></i>
+                    <h4>Вы пока не организуете мероприятия</h4>
+                    <p class="text-muted">Создайте своё первое мероприятие и пригласите участников!</p>
+                    <a href="create.html" class="btn btn-success">
+                        <i class="bi bi-plus-circle"></i> Создать событие
+                    </a>
+                </div>
+            </div>
+        `;
+                return;
+            }
+
+            let eventsHTML = '';
+
+            events.forEach(event => {
+                const eventDateTime = new Date(`${event.event_date}T${event.event_time}`);
+                const now = new Date();
+                const isPast = eventDateTime < now;
+                const isToday = event.event_date === new Date().toISOString().split('T')[0];
+
+                // Форматируем дату
+                const formattedDate = formatDate(event.event_date);
+
+                // Определяем статус события
+                let statusBadge = '';
+                let statusText = '';
+
+                if (event.status === 'cancelled') {
+                    statusBadge = 'bg-secondary';
+                    statusText = 'Отменено';
+                } else if (isPast) {
+                    statusBadge = 'bg-secondary';
+                    statusText = 'Завершено';
+                } else if (isToday) {
+                    statusBadge = 'bg-success';
+                    statusText = 'Сегодня';
+                } else {
+                    statusBadge = 'bg-primary';
+                    statusText = 'Активно';
+                }
+
+                eventsHTML += `
+            <div class="col">
+                <div class="card h-100 event-card">
+                    <span class="status-badge badge organizer-badge">
+                        <i class="bi bi-megaphone"></i> Организатор
+                    </span>
+                    <span class="category-badge badge ${event.price > 0 ? 'bg-warning text-dark' : 'bg-success'}">
+                        ${event.price > 0 ? event.price + ' ₽' : 'Бесплатно'}
+                    </span>
+                    
+                    <div class="map-preview">
+                        <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                            <i class="bi bi-geo-alt-fill me-2"></i>
+                            ${event.location || 'Место проведения'}
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">${event.title || 'Без названия'}</h5>
+                            <img src="${event.sport_type || 'default'}.svg" class="sport-icon" alt="${event.sport_type || 'Спорт'}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <span class="badge ${statusBadge} me-2">${statusText}</span>
+                            <span class="badge bg-light text-dark">
+                                <i class="bi bi-tag me-1"></i> 
+                                ${getEventTypeText(event.event_type)}
+                            </span>
+                        </div>
+                        
+                        <p class="card-text">
+                            <i class="bi bi-calendar"></i> <strong>${formattedDate}</strong><br>
+                            <i class="bi bi-clock"></i> ${event.event_time || '00:00'}<br>
+                            <i class="bi bi-geo-alt"></i> ${event.location || 'Место не указано'}<br>
+                            <i class="bi bi-people"></i> 
+                            ${event.participants_count || 0} 
+                            ${event.max_participants ? `/ ${event.max_participants}` : ''} участников
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <small class="text-muted">
+                                Создано: ${new Date(event.created_at).toLocaleDateString('ru-RU')}
+                            </small>
+                            
+                            <div>
+                                <a href="event-details.html?id=${event.id}" class="btn btn-outline-primary btn-sm me-2">
+                                    <i class="bi bi-eye"></i> Просмотр
+                                </a>
+                                ${!isPast && event.status !== 'cancelled' ? `
+                                <button class="btn btn-outline-secondary btn-sm" onclick="editEvent(${event.id})">
+                                    <i class="bi bi-pencil"></i> Редактировать
+                                </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+            });
+
+            container.innerHTML = eventsHTML;
+        }
+
+        // Вспомогательная функция для получения текста типа события
+        function getEventTypeText(eventType) {
+            const types = {
+                'training': 'Тренировка',
+                'competition': 'Соревнование',
+                'tournament': 'Турнир',
+                'friendly': 'Товарищеская встреча',
+                'marathon': 'Марафон',
+                'workshop': 'Мастер-класс'
+            };
+            return types[eventType] || eventType || 'Мероприятие';
         }
 
         // Функция для загрузки прошедших мероприятий
@@ -820,6 +995,7 @@
             }
         }
 
+        // Функция для редактирования события
         function editEvent(eventId) {
             window.location.href = `create.html?edit=${eventId}`;
         }
@@ -847,6 +1023,16 @@
             loadParticipatingEvents();
 
             // Обработка переключения вкладок
+            document.addEventListener('DOMContentLoaded', function () {
+                const organizingTab = document.getElementById('organizing-tab');
+
+                if (organizingTab) {
+                    organizingTab.addEventListener('shown.bs.tab', function () {
+                        console.log('Переключились на вкладку "Организую"');
+                        loadOrganizingEvents();
+                    });
+                }
+            });
             const participatingTab = document.getElementById('participating-tab');
             const organizingTab = document.getElementById('organizing-tab');
             const pastTab = document.getElementById('past-tab');
