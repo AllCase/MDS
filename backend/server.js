@@ -690,22 +690,22 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
 // ==================================================================
 
 // ==================================================================
-// Получение мероприятий, в которых пользователь участвует (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// ИСПРАВЛЕННЫЕ ENDPOINT'Ы НА ОСНОВЕ РАБОЧИХ ДИАГНОСТИЧЕСКИХ ЗАПРОСОВ
 // ==================================================================
+
+// Получение мероприятий, в которых пользователь участвует (РАБОЧАЯ ВЕРСИЯ)
 app.get('/api/events/participating', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log(`Запрос мероприятий для участия пользователя ${userId}`);
 
     const result = await pool.query(
-      `SELECT e.*, 
-                u.full_name AS organizer_name,
-                (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) AS participants_count
+      `SELECT e.*, u.full_name AS organizer_name
              FROM events e
              JOIN event_participants ep ON e.id = ep.event_id
              JOIN users u ON e.organizer_id = u.id
-             WHERE ep.user_id = $1 AND e.status = 'active'
-             ORDER BY e.event_date ASC, e.event_time ASC`,
+             WHERE ep.user_id = $1
+             ORDER BY e.event_date DESC`,
       [userId]
     );
 
@@ -720,22 +720,18 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
   }
 });
 
-// ==================================================================
-// Получение мероприятий, которые пользователь организует (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-// ==================================================================
+// Получение мероприятий, которые пользователь организует (РАБОЧАЯ ВЕРСИЯ)
 app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log('Запрос организуемых мероприятий для пользователя:', userId);
 
     const result = await pool.query(
-      `SELECT e.*, 
-                u.full_name AS organizer_name,
-                (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) AS participants_count
+      `SELECT e.*, u.full_name AS organizer_name
              FROM events e
              JOIN users u ON e.organizer_id = u.id
              WHERE e.organizer_id = $1
-             ORDER BY e.event_date ASC, e.event_time ASC`,
+             ORDER BY e.event_date DESC`,
       [userId]
     );
 
@@ -750,28 +746,26 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   }
 });
 
-
-// ==================================================================
-// Получение прошедших мероприятий (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-// ==================================================================
+// Получение прошедших мероприятий (УПРОЩЕННАЯ РАБОЧАЯ ВЕРСИЯ)
 app.get('/api/events/past', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log(`Запрос прошедших мероприятий для пользователя ${userId}`);
 
+    // Получаем текущую дату
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Упрощенный запрос: события, где пользователь организатор или участник, и дата уже прошла
     const result = await pool.query(
-      `SELECT e.*, u.full_name AS organizer_name,
-                (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) AS participants_count
+      `SELECT e.*, u.full_name AS organizer_name
              FROM events e
              JOIN users u ON e.organizer_id = u.id
-             WHERE (e.organizer_id = $1 OR EXISTS (
-                 SELECT 1 FROM event_participants ep 
-                 WHERE ep.event_id = e.id AND ep.user_id = $1
-             )) 
-             AND (e.event_date < CURRENT_DATE OR (e.event_date = CURRENT_DATE AND e.event_time < CURRENT_TIME))
-             AND e.status = 'active'
-             ORDER BY e.event_date DESC, e.event_time DESC`,
-      [userId]
+             WHERE (e.organizer_id = $1 OR e.id IN (
+                 SELECT event_id FROM event_participants WHERE user_id = $1
+             ))
+             AND e.event_date < $2
+             ORDER BY e.event_date DESC`,
+      [userId, currentDate]
     );
 
     console.log('Найдено прошедших мероприятий:', result.rows.length);
