@@ -695,8 +695,6 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
 app.get('/api/events/participating', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const currentDate = new Date().toISOString().split('T')[0];
-
     console.log(`Запрос мероприятий для участия пользователя ${userId}`);
 
     const result = await pool.query(
@@ -715,7 +713,10 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения мероприятий для участия:', error);
-    res.status(500).json({ error: 'Ошибка сервера при получении мероприятий для участия' });
+    res.status(500).json({
+      error: 'Ошибка сервера при получении мероприятий для участия',
+      details: error.message
+    });
   }
 });
 
@@ -734,14 +735,7 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
              FROM events e
              JOIN users u ON e.organizer_id = u.id
              WHERE e.organizer_id = $1
-             ORDER BY 
-                 CASE 
-                     WHEN e.event_date < CURRENT_DATE THEN 1
-                     WHEN e.event_date = CURRENT_DATE AND e.event_time < CURRENT_TIME THEN 1
-                     ELSE 0 
-                 END,
-                 e.event_date ASC, 
-                 e.event_time ASC`,
+             ORDER BY e.event_date ASC, e.event_time ASC`,
       [userId]
     );
 
@@ -749,9 +743,13 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения организуемых мероприятий:', error);
-    res.status(500).json({ error: 'Ошибка сервера при получении организуемых мероприятий' });
+    res.status(500).json({
+      error: 'Ошибка сервера при получении организуемых мероприятий',
+      details: error.message
+    });
   }
 });
+
 
 // ==================================================================
 // Получение прошедших мероприятий (ИСПРАВЛЕННАЯ ВЕРСИЯ)
@@ -759,8 +757,6 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
 app.get('/api/events/past', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const currentDate = new Date().toISOString().split('T')[0];
-
     console.log(`Запрос прошедших мероприятий для пользователя ${userId}`);
 
     const result = await pool.query(
@@ -772,19 +768,77 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
                  SELECT 1 FROM event_participants ep 
                  WHERE ep.event_id = e.id AND ep.user_id = $1
              )) 
-             AND (e.event_date < $2 OR (e.event_date = $2 AND e.event_time < CURRENT_TIME))
+             AND (e.event_date < CURRENT_DATE OR (e.event_date = CURRENT_DATE AND e.event_time < CURRENT_TIME))
              AND e.status = 'active'
              ORDER BY e.event_date DESC, e.event_time DESC`,
-      [userId, currentDate]
+      [userId]
     );
 
     console.log('Найдено прошедших мероприятий:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
     console.error('Ошибка получения прошедших мероприятий:', error);
-    res.status(500).json({ error: 'Ошибка сервера при получении прошедших мероприятий' });
+    res.status(500).json({
+      error: 'Ошибка сервера при получении прошедших мероприятий',
+      details: error.message
+    });
   }
-}); 
+});
+
+// Проверка подключения к БД
+app.get('/api/debug/db-test', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT 1 as test');
+    res.json({ success: true, message: 'База данных доступна', data: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Проверка событий пользователя
+app.get('/api/debug/user-events/:userId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    // События как организатор
+    const organizingResult = await pool.query(
+      'SELECT * FROM events WHERE organizer_id = $1',
+      [userId]
+    );
+
+    // События как участник
+    const participatingResult = await pool.query(
+      `SELECT e.* FROM events e 
+             JOIN event_participants ep ON e.id = ep.event_id 
+             WHERE ep.user_id = $1`,
+      [userId]
+    );
+
+    res.json({
+      organizing: organizingResult.rows,
+      participating: participatingResult.rows,
+      organizingCount: organizingResult.rows.length,
+      participatingCount: participatingResult.rows.length
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Простой тест структуры БД
+app.get('/api/debug/tables', authenticateToken, async (req, res) => {
+  try {
+    const tablesResult = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+        `);
+
+    res.json({ tables: tablesResult.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Отмена участия в событии
 app.delete('/api/events/:id/participate', authenticateToken, async (req, res) => {
