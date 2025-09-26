@@ -685,7 +685,7 @@
             }
         }
 
-        // Функция для отображения мероприятий
+        // Функция для отображения мероприятий (ОБНОВЛЕННАЯ)
         function displayEvents(events, containerId, type) {
             const container = document.getElementById(containerId);
             if (!container) {
@@ -698,94 +698,117 @@
             if (!Array.isArray(events)) {
                 console.error('❌ Ожидался массив мероприятий, получено:', events);
                 container.innerHTML = `
-      <div class="col-12">
-        <div class="alert alert-danger">
-          Ошибка формата данных
-        </div>
-      </div>
-    `;
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    Ошибка формата данных
+                </div>
+            </div>
+        `;
                 return;
             }
 
             if (events.length === 0) {
                 container.innerHTML = `
-      <div class="col-12">
-        <div class="empty-state">
-          <i class="bi bi-calendar-x"></i>
-          <h4>Нет мероприятий</h4>
-          <p class="text-muted">${type === 'participating'
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x"></i>
+                    <h4>Нет мероприятий</h4>
+                    <p class="text-muted">${type === 'participating'
                         ? 'Вы не участвуете в мероприятиях'
                         : type === 'organizing'
                             ? 'Вы не организуете мероприятия'
                             : 'Нет прошедших мероприятий'
                     }.</p>
-        </div>
-      </div>
-    `;
+                    ${type === 'organizing' ? `
+                    <a href="create.html" class="btn btn-success mt-3">
+                        <i class="bi bi-plus-circle"></i> Создать первое мероприятие
+                    </a>
+                    ` : ''}
+                </div>
+            </div>
+        `;
                 return;
             }
 
             let eventsHTML = '';
             events.forEach(event => {
-                const eventDate = new Date(event.event_date);
+                // Безопасное создание даты
+                const eventDate = event.event_date ? new Date(event.event_date) : new Date();
                 const now = new Date();
                 const isPast = eventDate < now;
+                const isToday = eventDate.toDateString() === now.toDateString();
 
                 // Форматируем дату
                 const formattedDate = formatDate(event.event_date);
 
+                // Форматируем время (убираем секунды если есть)
+                const eventTime = event.event_time ? event.event_time.substring(0, 5) : '00:00';
+
+                // Определяем количество участников (если нет в данных, ставим 0)
+                const participantsCount = event.participants_count || 0;
+
                 eventsHTML += `
-      <div class="col">
-        <div class="card h-100 event-card">
-          <span class="status-badge badge ${type === 'organizing' ? 'organizer-badge' : 'participant-badge'}">
-            ${type === 'organizing' ? 'Организатор' : 'Участник'}
-          </span>
-          <span class="category-badge badge ${event.price > 0 ? 'bg-warning text-dark' : 'bg-danger'}">
-            ${event.price > 0 ? event.price + ' ₽' : 'Бесплатно'}
-          </span>
-          <div class="map-preview"></div>
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <h5 class="card-title">${event.title || 'Без названия'}</h5>
-              <img src="${event.sport_type || 'default'}.svg" class="sport-icon" alt="${event.sport_type || 'Спорт'}">
+            <div class="col">
+                <div class="card h-100 event-card">
+                    <span class="status-badge badge ${type === 'organizing' ? 'organizer-badge' : 'participant-badge'}">
+                        ${type === 'organizing' ? 'Организатор' : 'Участник'}
+                    </span>
+                    <span class="category-badge badge ${event.price > 0 ? 'bg-warning text-dark' : 'bg-success'}">
+                        ${event.price > 0 ? event.price + ' ₽' : 'Бесплатно'}
+                    </span>
+                    
+                    <div class="map-preview">
+                        <div class="d-flex justify-content-center align-items-center h-100 text-muted">
+                            <i class="bi bi-geo-alt-fill me-2"></i>
+                            ${event.location || 'Место проведения'}
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">${event.title || 'Без названия'}</h5>
+                            <img src="${event.sport_type || 'default'}.svg" class="sport-icon" alt="${event.sport_type || 'Спорт'}">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <span class="badge bg-light text-dark me-2">
+                                <i class="bi bi-tag me-1"></i> 
+                                ${getEventTypeText(event.event_type)}
+                            </span>
+                            <span class="badge ${isPast ? 'bg-secondary' : isToday ? 'bg-success' : 'bg-primary'}">
+                                ${isPast ? 'Завершено' : isToday ? 'Сегодня' : 'Активно'}
+                            </span>
+                        </div>
+                        
+                        <p class="card-text">
+                            <i class="bi bi-calendar"></i> <strong>${formattedDate}</strong><br>
+                            <i class="bi bi-clock"></i> ${eventTime}<br>
+                            <i class="bi bi-geo-alt"></i> ${event.location || 'Место не указано'}<br>
+                            <i class="bi bi-people"></i> 
+                            ${participantsCount} 
+                            ${event.max_participants ? `/ ${event.max_participants}` : ''} участников
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <small class="text-muted">
+                                Организатор: ${event.organizer_name || 'Неизвестно'}
+                            </small>
+                            
+                            <div>
+                                <a href="event-details.html?id=${event.id}" class="btn btn-outline-primary btn-sm me-2">
+                                    <i class="bi bi-eye"></i> Просмотр
+                                </a>
+                                ${type === 'organizing' && !isPast ? `
+                                <button class="btn btn-outline-secondary btn-sm" onclick="editEvent(${event.id})">
+                                    <i class="bi bi-pencil"></i> Редактировать
+                                </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="card-text">
-              <i class="bi bi-calendar"></i> ${formattedDate}, ${event.event_time || '00:00'}<br>
-              <i class="bi bi-geo-alt"></i> ${event.location || 'Место не указано'}<br>
-              <i class="bi bi-people"></i> ${event.participants_count || 0} ${event.max_participants ? `/ ${event.max_participants}` : ''
-                    } участников
-            </p>
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="d-flex">
-                <span class="badge bg-light text-dark me-2">
-                  <i class="bi bi-tag me-1"></i> ${event.event_type === 'training' ? 'Тренировка' :
-                        event.event_type === 'competition' ? 'Соревнование' :
-                            event.event_type || 'Мероприятие'
-                    }
-                </span>
-                <span class="badge ${isPast ? 'bg-secondary' : 'bg-success'}">
-                  ${isPast ? 'Завершено' : 'Активно'}
-                </span>
-              </div>
-              ${type === 'organizing' ? `
-              <div>
-                <button class="btn btn-outline-primary btn-sm me-2" onclick="editEvent(${event.id})">
-                  <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-outline-danger btn-sm" onclick="deleteEvent(${event.id})">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </div>
-              ` : `
-              <button class="btn btn-outline-danger btn-sm" onclick="leaveEvent(${event.id})">
-                ${isPast ? 'Удалить из истории' : 'Отменить участие'}
-              </button>
-              `}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+        `;
             });
 
             container.innerHTML = eventsHTML;
