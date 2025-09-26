@@ -764,9 +764,6 @@
                 // Форматируем время (убираем секунды если есть)
                 const eventTime = event.event_time ? event.event_time.substring(0, 5) : '00:00';
 
-                // Определяем количество участников (если нет в данных, ставим 0)
-                const participantsCount = event.participants_count || 0;
-
                 eventsHTML += `
             <div class="col">
                 <div class="card h-100 event-card">
@@ -805,13 +802,12 @@
                             <i class="bi bi-clock"></i> ${eventTime}<br>
                             <i class="bi bi-geo-alt"></i> ${event.location || 'Место не указано'}<br>
                             <i class="bi bi-people"></i> 
-                            ${participantsCount} 
-                            ${event.max_participants ? `/ ${event.max_participants}` : ''} участников
+                            Участников: ${event.max_participants || 'неограничено'}
                         </p>
                         
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <small class="text-muted">
-                                Организатор: ${event.organizer_name || 'Неизвестно'}
+                                ID события: ${event.id}
                             </small>
                             
                             <div>
@@ -834,18 +830,15 @@
             container.innerHTML = eventsHTML;
         }
 
-        // ВРЕМЕННОЕ РЕШЕНИЕ: Используем диагностические endpoint'ы которые точно работают
+        // ПОСТОЯННОЕ РЕШЕНИЕ: Используем основные endpoints
         async function loadParticipatingEvents() {
             const container = document.getElementById('participatingEventsContainer');
 
             try {
                 container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
 
-                // Используем рабочий диагностический endpoint
-                const user = await fetchUserData();
-                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
-                const events = debugData.participating;
-
+                // Используем основной endpoint
+                const events = await fetchEvents('/api/events/participating');
                 console.log('📋 Данные для участия:', events);
                 displayEvents(events, 'participatingEventsContainer', 'participating');
             } catch (error) {
@@ -867,11 +860,8 @@
             try {
                 container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
 
-                // Используем рабочий диагностический endpoint
-                const user = await fetchUserData();
-                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
-                const events = debugData.organizing;
-
+                // Используем основной endpoint
+                const events = await fetchEvents('/api/events/organizing');
                 console.log('📋 Данные для организатора:', events);
                 displayEvents(events, 'organizingEventsContainer', 'organizing');
             } catch (error) {
@@ -893,17 +883,10 @@
             try {
                 container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
 
-                // Используем рабочий диагностический endpoint и фильтруем на клиенте
-                const user = await fetchUserData();
-                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
-                const allEvents = debugData.organizing.concat(debugData.participating);
-
-                // Фильтруем прошедшие мероприятия на клиенте
-                const currentDate = new Date().toISOString().split('T')[0];
-                const pastEvents = allEvents.filter(event => event.event_date < currentDate);
-
-                console.log('📋 Данные для прошедших мероприятий:', pastEvents);
-                displayEvents(pastEvents, 'pastEventsContainer', 'past');
+                // Используем основной endpoint
+                const events = await fetchEvents('/api/events/past');
+                console.log('📋 Данные для прошедших мероприятий:', events);
+                displayEvents(events, 'pastEventsContainer', 'past');
             } catch (error) {
                 console.error('Ошибка загрузки прошедших мероприятий:', error);
                 container.innerHTML = `
