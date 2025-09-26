@@ -686,26 +686,20 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
 });
 
 // ==================================================================
-// НОВЫЕ ENDPOINTS ДЛЯ МОИХ МЕРОПРИЯТИЙ
+// ИСПРАВЛЕННЫЕ ENDPOINTS (используем те же запросы, что и в диагностике)
 // ==================================================================
 
-// ==================================================================
-// УПРОЩЕННЫЕ РАБОЧИЕ ENDPOINT'Ы (на основе диагностических запросов)
-// ==================================================================
-
-// Получение мероприятий, в которых пользователь участвует (УПРОЩЕННАЯ РАБОЧАЯ ВЕРСИЯ)
+// Получение мероприятий, в которых пользователь участвует (РАБОЧАЯ ВЕРСИЯ)
 app.get('/api/events/participating', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log('🔄 Запрос мероприятий для участия пользователя:', userId);
 
+    // ТОЧНО ТАКОЙ ЖЕ ЗАПРОС КАК В ДИАГНОСТИЧЕСКОМ ENDPOINT'е
     const result = await pool.query(
-      `SELECT DISTINCT e.*, u.full_name AS organizer_name
-             FROM events e
-             JOIN event_participants ep ON e.id = ep.event_id
-             JOIN users u ON e.organizer_id = u.id
-             WHERE ep.user_id = $1
-             ORDER BY e.event_date DESC`,
+      `SELECT e.* FROM events e 
+             JOIN event_participants ep ON e.id = ep.event_id 
+             WHERE ep.user_id = $1`,
       [userId]
     );
 
@@ -715,23 +709,21 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
     console.error('❌ Ошибка получения мероприятий для участия:', error);
     res.status(500).json({
       error: 'Ошибка сервера',
-      message: error.message
+      message: error.message,
+      details: 'Ошибка в запросе participating events'
     });
   }
 });
 
-// Получение мероприятий, которые пользователь организует (УПРОЩЕННАЯ РАБОЧАЯ ВЕРСИЯ)
+// Получение мероприятий, которые пользователь организует (РАБОЧАЯ ВЕРСИЯ)
 app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log('🔄 Запрос организуемых мероприятий для пользователя:', userId);
 
+    // ТОЧНО ТАКОЙ ЖЕ ЗАПРОС КАК В ДИАГНОСТИЧЕСКОМ ENDPOINT'е
     const result = await pool.query(
-      `SELECT e.*, u.full_name AS organizer_name
-             FROM events e
-             JOIN users u ON e.organizer_id = u.id
-             WHERE e.organizer_id = $1
-             ORDER BY e.event_date DESC`,
+      'SELECT * FROM events WHERE organizer_id = $1',
       [userId]
     );
 
@@ -741,7 +733,8 @@ app.get('/api/events/organizing', authenticateToken, async (req, res) => {
     console.error('❌ Ошибка получения организуемых мероприятий:', error);
     res.status(500).json({
       error: 'Ошибка сервера',
-      message: error.message
+      message: error.message,
+      details: 'Ошибка в запросе organizing events'
     });
   }
 });
@@ -752,15 +745,13 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     console.log('🔄 Запрос прошедших мероприятий для пользователя:', userId);
 
+    // Упрощенный запрос на основе рабочих диагностических запросов
     const result = await pool.query(
-      `SELECT e.*, u.full_name AS organizer_name
-             FROM events e
-             JOIN users u ON e.organizer_id = u.id
+      `SELECT e.* FROM events e
              WHERE (e.organizer_id = $1 OR e.id IN (
                  SELECT event_id FROM event_participants WHERE user_id = $1
              ))
-             AND e.event_date < CURRENT_DATE
-             ORDER BY e.event_date DESC`,
+             AND e.event_date < CURRENT_DATE`,
       [userId]
     );
 
@@ -770,10 +761,11 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
     console.error('❌ Ошибка получения прошедших мероприятий:', error);
     res.status(500).json({
       error: 'Ошибка сервера',
-      message: error.message
+      message: error.message,
+      details: 'Ошибка в запросе past events'
     });
   }
-});
+}); 
 
 // ==================================================================
 // ТЕСТОВЫЕ ENDPOINT'Ы ДЛЯ ДИАГНОСТИКИ
