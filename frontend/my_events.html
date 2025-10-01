@@ -192,24 +192,6 @@
                 </a>
             </div>
         </div>
-        <!-- Диагностическая панель -->
-        <div class="alert alert-info mb-4">
-            <h6>🔧 Диагностика endpoint'ов</h6>
-            <div class="btn-group">
-                <button class="btn btn-sm btn-outline-primary" onclick="testEndpoint('/api/test/auth')">Тест
-                    аутентификации</button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="testEndpoint('/api/test/events-simple')">Тест
-                    простого запроса</button>
-                <button class="btn btn-sm btn-outline-success" onclick="testEndpoint('/api/test/events-join')">Тест
-                    JOIN</button>
-                <button class="btn btn-sm btn-outline-warning" onclick="testEndpoint('/api/test/events-subquery')">Тест
-                    подзапроса</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="testEndpoint('/api/events/participating')">Тест
-                    participating</button>
-                <button class="btn btn-sm btn-outline-info" onclick="testEndpoint('/api/events/organizing')">Тест
-                    organizing</button>
-            </div>
-        </div>
         <!-- Вкладки -->
         <ul class="nav nav-tabs mb-4" id="eventsTab" role="tablist">
             <li class="nav-item" role="presentation">
@@ -863,23 +845,23 @@
             container.innerHTML = eventsHTML;
         }
 
-       // ВРЕМЕННОЕ РАБОЧЕЕ РЕШЕНИЕ: Используем диагностические endpoint'ы
-async function loadParticipatingEvents() {
-    const container = document.getElementById('participatingEventsContainer');
-    
-    try {
-        container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-        
-        // Используем рабочий диагностический endpoint
-        const user = await fetchUserData();
-        const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
-        const events = debugData.participating;
-        
-        console.log('📋 Данные для участия:', events);
-        displayEvents(events, 'participatingEventsContainer', 'participating');
-    } catch (error) {
-        console.error('Ошибка загрузки мероприятий для участия:', error);
-        container.innerHTML = `
+        // ВРЕМЕННОЕ РАБОЧЕЕ РЕШЕНИЕ: Используем диагностические endpoint'ы
+        async function loadParticipatingEvents() {
+            const container = document.getElementById('participatingEventsContainer');
+
+            try {
+                container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
+
+                // Используем рабочий диагностический endpoint
+                const user = await fetchUserData();
+                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
+                const events = debugData.participating;
+
+                console.log('📋 Данные для участия:', events);
+                displayEvents(events, 'participatingEventsContainer', 'participating');
+            } catch (error) {
+                console.error('Ошибка загрузки мероприятий для участия:', error);
+                container.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-danger">
                     Не удалось загрузить мероприятия: ${error.message}
@@ -887,25 +869,25 @@ async function loadParticipatingEvents() {
                 </div>
             </div>
         `;
-    }
-}
+            }
+        }
 
-async function loadOrganizingEvents() {
-    const container = document.getElementById('organizingEventsContainer');
-    
-    try {
-        container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-        
-        // Используем рабочий диагностический endpoint
-        const user = await fetchUserData();
-        const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
-        const events = debugData.organizing;
-        
-        console.log('📋 Данные для организатора:', events);
-        displayEvents(events, 'organizingEventsContainer', 'organizing');
-    } catch (error) {
-        console.error('Ошибка загрузки организуемых мероприятий:', error);
-        container.innerHTML = `
+        async function loadOrganizingEvents() {
+            const container = document.getElementById('organizingEventsContainer');
+
+            try {
+                container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
+
+                // Используем рабочий диагностический endpoint
+                const user = await fetchUserData();
+                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
+                const events = debugData.organizing;
+
+                console.log('📋 Данные для организатора:', events);
+                displayEvents(events, 'organizingEventsContainer', 'organizing');
+            } catch (error) {
+                console.error('Ошибка загрузки организуемых мероприятий:', error);
+                container.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-danger">
                     Не удалось загрузить ваши мероприятия: ${error.message}
@@ -913,29 +895,29 @@ async function loadOrganizingEvents() {
                 </div>
             </div>
         `;
-    }
-}
+            }
+        }
 
-async function loadPastEvents() {
-    const container = document.getElementById('pastEventsContainer');
-    
-    try {
-        container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-        
-        // Используем рабочий диагностический endpoint и фильтруем на клиенте
-        const user = await fetchUserData();
-        const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
-        const allEvents = debugData.organizing.concat(debugData.participating);
-        
-        // Фильтруем прошедшие мероприятия на клиенте
-        const currentDate = new Date().toISOString().split('T')[0];
-        const pastEvents = allEvents.filter(event => event.event_date < currentDate);
-        
-        console.log('📋 Данные для прошедших мероприятий:', pastEvents);
-        displayEvents(pastEvents, 'pastEventsContainer', 'past');
-    } catch (error) {
-        console.error('Ошибка загрузки прошедших мероприятий:', error);
-        container.innerHTML = `
+        async function loadPastEvents() {
+            const container = document.getElementById('pastEventsContainer');
+
+            try {
+                container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
+
+                // Используем рабочий диагностический endpoint и фильтруем на клиенте
+                const user = await fetchUserData();
+                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
+                const allEvents = debugData.organizing.concat(debugData.participating);
+
+                // Фильтруем прошедшие мероприятия на клиенте
+                const currentDate = new Date().toISOString().split('T')[0];
+                const pastEvents = allEvents.filter(event => event.event_date < currentDate);
+
+                console.log('📋 Данные для прошедших мероприятий:', pastEvents);
+                displayEvents(pastEvents, 'pastEventsContainer', 'past');
+            } catch (error) {
+                console.error('Ошибка загрузки прошедших мероприятий:', error);
+                container.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-danger">
                     Не удалось загрузить прошедшие мероприятия: ${error.message}
@@ -943,8 +925,8 @@ async function loadPastEvents() {
                 </div>
             </div>
         `;
-    }
-}
+            }
+        }
 
         // Функция для отображения организуемых мероприятий
         function displayOrganizingEvents(events, containerId) {
