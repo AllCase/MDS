@@ -16,10 +16,10 @@ COPY backend/ ./
 # Копируем фронтенд
 COPY frontend/ ./frontend/
 
-# Скачиваем SSL сертификат для БД
-RUN mkdir -p /app/certs && \
-    curl -o /app/certs/root.crt "https://st.timeweb.com/cloud-static/ca.crt" && \
-    chmod 0600 /app/certs/root.crt
+# (временно отключаем скачивание сертификата БД, т.к. были TLS-ошибки при curl)
+# RUN mkdir -p /app/certs && \
+#     curl -o /app/certs/root.crt "https://st.timeweb.com/cloud-static/ca.crt" && \
+#     chmod 0600 /app/certs/root.crt
 
 # Создаем непривилегированного пользователя
 RUN adduser -D appuser && chown -R appuser:appuser /app
