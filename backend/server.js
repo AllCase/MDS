@@ -960,6 +960,7 @@ app.use('/api/*', (req, res) => {
 // Запуск сервера
 // ==================================================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
