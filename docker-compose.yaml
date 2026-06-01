@@ -2,15 +2,12 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
-    ports:
-      - "3000:3000"  # Используйте порт, отличный от 80/443
+    build: .              # Dockerfile в корне
     environment:
       NODE_ENV: production
-      DB_HOST: 176.53.160.66  # Публичный IP БД
+      DB_HOST: 176.53.160.66
       DB_PORT: 5432
       DB_USER: gen_user
       DB_PASSWORD: YZ>|^DuMF+P7LX
       DB_NAME: default_db
-      DB_SSL: "false"  # Временно отключите SSL
-    # Не используйте volumes, networks или другие расширенные настройки
+      DB_SSL: "false"
