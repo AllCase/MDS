@@ -29,4 +29,4 @@ USER appuser
 EXPOSE 3000
 
 # Запускаем сервер
-CMD ["node", "src/server.js"]
+CMD ["node", "server.js"]
