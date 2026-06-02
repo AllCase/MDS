@@ -239,6 +239,15 @@
                     </div>
                 </div>
 
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Участники (<span id="participantsCount">0</span>)</h5>
+                    </div>
+                    <div class="card-body" id="participantsList">
+                        <p class="text-muted">Загрузка...</p>
+                    </div>
+                </div>
+
                 <div class="card mb-4" id="reviewCard" style="display: none;">
                     <div class="card-header bg-light">
                         <h5 class="mb-0">Оставить отзыв</h5>
@@ -435,6 +444,7 @@
                 }
 
                 renderEventDetails(event, isParticipant);
+                await loadParticipants(event.id);
                 initReviewSystem(event, isParticipant, isOrganizer);
             } catch (error) {
                 showError(error.message);
@@ -554,6 +564,58 @@
                     };
                 }
             }
+        }
+
+        async function loadParticipants(eventId) {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                const resp = await fetch(`/api/events/${eventId}/participants`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!resp.ok) throw new Error('Не удалось загрузить участников');
+                const participants = await resp.json();
+                const container = document.getElementById('participantsList');
+                const countSpan = document.getElementById('participantsCount');
+                if (!container) return;
+                if (participants.length === 0) {
+                    container.innerHTML = '<p class="text-muted">Пока никто не зарегистрировался</p>';
+                    if (countSpan) countSpan.textContent = '0';
+                    return;
+                }
+                if (countSpan) countSpan.textContent = participants.length;
+                let html = '<ul class="list-group list-group-flush">';
+                participants.forEach(p => {
+                    let ratingDisplay = '';
+                    if (p.total_reviews > 0) {
+                        const stars = '⭐'.repeat(Math.round(p.average_rating));
+                        ratingDisplay = `<span class="ms-2 small">${stars} ${p.average_rating} (${p.total_reviews})</span>`;
+                    } else {
+                        ratingDisplay = '<span class="ms-2 small text-muted">нет отзывов</span>';
+                    }
+                    html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div><i class="bi bi-person"></i> ${escapeHtml(p.username)}</div>
+                        <div>${ratingDisplay}</div>
+                     </li>`;
+                });
+                html += '</ul>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error(error);
+                if (document.getElementById('participantsList')) {
+                    document.getElementById('participantsList').innerHTML = '<p class="text-danger">Ошибка загрузки участников</p>';
+                }
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function (m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
         }
 
         async function initReviewSystem(event, isParticipant, isOrganizer) {
