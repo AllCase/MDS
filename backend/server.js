@@ -24,6 +24,35 @@ const pool = new Pool({
   ssl: sslConfig
 });
 
+// Обновление статуса завершённых событий
+async function markCompletedEvents() {
+  try {
+    const result = await pool.query(
+      `UPDATE events SET status = 'completed'
+       WHERE status = 'active'
+         AND (event_date + event_time::time + interval '3 hours') <= NOW() AT TIME ZONE 'Europe/Moscow'`
+    );
+    if (result.rowCount > 0) {
+      console.log(`${result.rowCount} событий помечены как completed`);
+    }
+  } catch (error) {
+    console.error('Ошибка при обновлении завершённых событий:', error);
+  }
+}
+
+// Вспомогательная функция для создания уведомлений (без дубликатов)
+async function createNotification(userId, eventId, type, message) {
+  try {
+    await pool.query(
+      `INSERT INTO notifications (user_id, event_id, type, message)
+       VALUES ($1, $2, $3, $4)`,
+      [userId, eventId, type, message]
+    );
+  } catch (error) {
+    console.error('Ошибка создания уведомления:', error);
+  }
+}
+
 // Подключаем middleware
 app.use(cors({
   origin: [
@@ -387,7 +416,7 @@ app.post('/api/events', authenticateToken, async (req, res) => {
       price,
       location,
       age_restriction,
-      organizer_id
+      organizer_display_type   // ← забираем здесь (один раз)
     } = req.body;
 
     console.log(`Время события от клиента: ${event_time}`);
@@ -434,45 +463,26 @@ app.post('/api/events', authenticateToken, async (req, res) => {
       });
     }
 
-    // Проверка существования организатора
-    const organizerCheck = await pool.query(
-      'SELECT id FROM users WHERE id = $1',
-      [organizer_id]
+    // Получаем данные текущего пользователя
+    const userResult = await pool.query(
+      'SELECT username, full_name FROM users WHERE id = $1',
+      [req.user.userId]
     );
-
-    if (organizerCheck.rows.length === 0) {
-      return res.status(400).json({ error: 'Организатор не найден' });
-    }
+    const user = userResult.rows[0];
+    const displayName = organizer_display_type === 'full_name' ? user.full_name : user.username;
 
     // Вставляем событие в базу
     const result = await pool.query(
       `INSERT INTO events (
-                title,
-                description,
-                event_date,
-                event_time,
-                sport_type,
-                event_type,
-                max_participants,
-                price,
-                location,
-                age_restriction,
-                organizer_id,
-                status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active')
-            RETURNING id`,
+        title, description, event_date, event_time, sport_type, event_type,
+        max_participants, price, location, age_restriction, organizer_id, status, organizer_display_name
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'active', $12)
+      RETURNING id`,
       [
-        title,
-        description,
-        event_date,
-        event_time,
-        sport_type,
-        event_type,
-        max_participants || null,
-        price || 0,
-        location,
-        age_restriction || 0,
-        organizer_id
+        title, description, event_date, event_time, sport_type, event_type,
+        max_participants || null, price || 0, location, age_restriction || 0,
+        req.user.userId,   // ← организатор текущий пользователь
+        displayName
       ]
     );
 
@@ -495,35 +505,44 @@ app.post('/api/events', authenticateToken, async (req, res) => {
 const handleEventsRequest = async (req, res) => {
   console.log(`Обработка запроса событий: ${req.originalUrl}`);
   try {
-    const { sport_type, date_from, date_to } = req.query;
+    const { sport_type, date_from, date_to, search } = req.query;
+    await markCompletedEvents();
     let query = `
       SELECT 
-        id, title, description,
-        event_date,
-        event_time,
-        sport_type, event_type,
-        max_participants, price,
-        location, age_restriction,
-        organizer_id, status,
-        TO_CHAR(
-          created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Moscow', 
-          'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
-        ) AS created_at
-      FROM events 
-      WHERE status = $1`;
+        e.id, e.title, e.description,
+        e.event_date, e.event_time,
+        e.sport_type, e.event_type,
+        e.max_participants, e.price,
+        e.location, e.age_restriction,
+        e.organizer_id, e.status,
+        TO_CHAR(e.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Moscow', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+        COALESCE(e.organizer_display_name, u.username) AS organizer_name,
+        (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) AS participant_count
+      FROM events e
+      JOIN users u ON e.organizer_id = u.id
+      WHERE e.status = $1`;
     const params = ['active'];
+    let paramIndex = 2;
 
     if (sport_type) {
-      query += ' AND sport_type = $2';
+      query += ` AND e.sport_type = $${paramIndex}`;
       params.push(sport_type);
+      paramIndex++;
     }
 
     if (date_from && date_to) {
-      query += ` AND event_date BETWEEN $${params.length + 1} AND $${params.length + 2}`;
+      query += ` AND e.event_date BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
       params.push(date_from, date_to);
+      paramIndex += 2;
     }
 
-    query += ' ORDER BY event_date, event_time LIMIT 50';
+    if (search && search.trim()) {
+      query += ` AND e.title ILIKE $${paramIndex}`;
+      params.push(`%${search.trim()}%`);
+      paramIndex++;
+    }
+
+    query += ' ORDER BY e.event_date, e.event_time LIMIT 50';
 
     const result = await pool.query(query, params);
     res.json(result.rows);
@@ -538,41 +557,16 @@ app.get('/api/events', handleEventsRequest);   // Без слеша
 app.get('/api/events/', handleEventsRequest);  // Со слешем
 
 // ==================================================================
-// Получение деталей события
-// ==================================================================
-app.get('/api/events/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query(
-      `SELECT e.*, u.full_name AS organizer_name 
-       FROM events e
-       JOIN users u ON e.organizer_id = u.id
-       WHERE e.id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Событие не найдено' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Ошибка получения события:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-// ==================================================================
 // Обновление события
 // ==================================================================
 app.put('/api/events/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const updateFields = req.body;
+  const userId = req.user.userId;
 
   try {
-    // Проверяем, что пользователь является организатором
+    // 1. Проверяем, что пользователь — организатор
     const event = await pool.query(
-      'SELECT organizer_id FROM events WHERE id = $1',
+      'SELECT * FROM events WHERE id = $1',
       [id]
     );
 
@@ -580,11 +574,43 @@ app.put('/api/events/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Событие не найдено' });
     }
 
-    if (event.rows[0].organizer_id !== req.user.userId) {
+    if (event.rows[0].organizer_id !== userId) {
       return res.status(403).json({ error: 'Недостаточно прав для редактирования' });
     }
 
-    // Формируем запрос на обновление
+    const oldEvent = event.rows[0];
+
+    // 2. Разрешённые поля для обновления (без organizer_display_type, его обработаем отдельно)
+    const allowedFields = [
+      'title', 'description', 'event_date', 'event_time',
+      'sport_type', 'event_type', 'max_participants', 'price',
+      'location', 'age_restriction'
+    ];
+
+    const updateFields = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateFields[field] = req.body[field];
+      }
+    }
+
+    // Обработка display_type (если передан)
+    if (req.body.organizer_display_type) {
+      const userResult = await pool.query(
+        'SELECT username, full_name FROM users WHERE id = $1',
+        [userId]
+      );
+      const user = userResult.rows[0];
+      updateFields.organizer_display_name =
+        req.body.organizer_display_type === 'full_name' ? user.full_name : user.username;
+      // в updateFields не добавляем organizer_display_type, только organizer_display_name
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      return res.status(400).json({ error: 'Нет полей для обновления' });
+    }
+
+    // 3. Формируем и выполняем UPDATE
     const setClause = Object.keys(updateFields)
       .map((key, i) => `${key} = $${i + 2}`)
       .join(', ');
@@ -593,10 +619,136 @@ app.put('/api/events/:id', authenticateToken, async (req, res) => {
     values.unshift(id);
 
     const query = `UPDATE events SET ${setClause} WHERE id = $1 RETURNING *`;
-
     const result = await pool.query(query, values);
-    res.json(result.rows[0]);
+    const updatedEvent = result.rows[0];
 
+    // 4. Сравниваем старые и новые значения для уведомлений
+    const changes = [];
+
+    // Вспомогательная функция для форматирования даты/времени в читаемый вид
+    const formatDateTime = (date, time) => {
+      try {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return `${date} ${time}`;
+        const dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+        return `${dateStr}, ${time?.substring(0, 5)}`;
+      } catch {
+        return `${date} ${time}`;
+      }
+    };
+
+    // Сравнение заголовка
+    if (updateFields.title !== undefined && updateFields.title !== oldEvent.title) {
+      changes.push({
+        type: 'event_updated_title',
+        message: `Название изменено: "${oldEvent.title}" → "${updateFields.title}"`
+      });
+    }
+
+    // Сравнение даты/времени – считаем за одно изменение, если что-то изменилось
+    if (
+      (updateFields.event_date !== undefined && updateFields.event_date !== oldEvent.event_date.toISOString().split('T')[0]) ||
+      (updateFields.event_time !== undefined && updateFields.event_time !== oldEvent.event_time)
+    ) {
+      const oldDateTime = formatDateTime(oldEvent.event_date, oldEvent.event_time);
+      const newDateTime = formatDateTime(
+        updateFields.event_date || oldEvent.event_date,
+        updateFields.event_time || oldEvent.event_time
+      );
+      changes.push({
+        type: 'event_updated_datetime',
+        message: `Дата и время изменены: ${oldDateTime} → ${newDateTime}`
+      });
+    }
+
+    // Место проведения
+    if (updateFields.location !== undefined && updateFields.location !== oldEvent.location) {
+      changes.push({
+        type: 'event_updated_location',
+        message: `Место проведения изменено: "${oldEvent.location}" → "${updateFields.location}"`
+      });
+    }
+
+    // Цена
+    if (updateFields.price !== undefined && parseFloat(updateFields.price) !== parseFloat(oldEvent.price)) {
+      const oldPrice = parseFloat(oldEvent.price);
+      const newPrice = parseFloat(updateFields.price);
+      let msg = '';
+      if (oldPrice === 0 && newPrice > 0) {
+        msg = `Мероприятие стало платным: стоимость участия ${newPrice.toFixed(2)} ₽`;
+      } else if (oldPrice > 0 && newPrice === 0) {
+        msg = `Мероприятие теперь бесплатное`;
+      } else {
+        msg = `Стоимость участия изменена: ${oldPrice.toFixed(2)} ₽ → ${newPrice.toFixed(2)} ₽`;
+      }
+      changes.push({ type: 'event_updated_price', message: msg });
+    }
+
+    // Максимум участников
+    // Максимум участников
+    if (updateFields.max_participants !== undefined) {
+      const oldMax = oldEvent.max_participants ? Number(oldEvent.max_participants) : null;
+      let newMax = updateFields.max_participants;
+      if (newMax === '' || newMax === null || newMax === undefined) newMax = null;
+      else newMax = Number(newMax);
+
+      if (oldMax !== newMax) {
+        const oldText = oldMax !== null ? oldMax : 'не ограничено';
+        const newText = newMax !== null ? newMax : 'не ограничено';
+        changes.push({
+          type: 'event_updated_max_participants',
+          message: `Максимальное количество участников изменено: ${oldText} → ${newText}`
+        });
+      }
+    }
+
+    // Возрастное ограничение
+    if (updateFields.age_restriction !== undefined && updateFields.age_restriction !== oldEvent.age_restriction) {
+      changes.push({
+        type: 'event_updated_age',
+        message: `Возрастное ограничение изменено: ${oldEvent.age_restriction || 0}+ → ${updateFields.age_restriction || 0}+`
+      });
+    }
+
+    // Описание
+    if (updateFields.description !== undefined && updateFields.description !== oldEvent.description) {
+      changes.push({
+        type: 'event_updated_description',
+        message: `Описание мероприятия обновлено`
+      });
+    }
+
+    // Тип спорта или тип события – одно общее уведомление
+    if ((updateFields.sport_type !== undefined && updateFields.sport_type !== oldEvent.sport_type) ||
+      (updateFields.event_type !== undefined && updateFields.event_type !== oldEvent.event_type)) {
+      changes.push({
+        type: 'event_updated_details',
+        message: `Изменены детали мероприятия`
+      });
+    }
+
+    // 5. Отправляем уведомления всем участникам, кроме организатора
+    if (changes.length > 0) {
+      const participants = await pool.query(
+        'SELECT user_id FROM event_participants WHERE event_id = $1',
+        [id]
+      );
+
+      for (const part of participants.rows) {
+        if (part.user_id === userId) continue; // организатору не нужно
+        for (const change of changes) {
+          await createNotification(
+            part.user_id,
+            id,
+            change.type,
+            change.message
+          );
+        }
+      }
+    }
+
+    // 6. Возвращаем обновлённое событие
+    res.json(updatedEvent);
   } catch (error) {
     console.error('Ошибка обновления события:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -646,9 +798,10 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    // Проверяем существование события
+    // Проверяем существование события и его актуальность
     const event = await pool.query(
-      'SELECT id, max_participants FROM events WHERE id = $1',
+      `SELECT id, max_participants, event_date, event_time, status 
+       FROM events WHERE id = $1`,
       [id]
     );
 
@@ -656,16 +809,29 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Событие не найдено' });
     }
 
+    const ev = event.rows[0];
+    if (ev.status !== 'active') {
+      return res.status(400).json({ error: 'Событие неактивно' });
+    }
+
+    // Проверяем, не началось ли уже событие (учитываем московское время UTC+3)
+    // Берём только дату в формате YYYY-MM-DD и добавляем время события с московским смещением
+    const eventDateOnly = ev.event_date instanceof Date
+      ? ev.event_date.toISOString().split('T')[0]
+      : String(ev.event_date).split('T')[0];
+    const eventDateTime = new Date(`${eventDateOnly}T${ev.event_time}+03:00`);
+    const now = new Date();
+    if (eventDateTime <= now) {
+      return res.status(400).json({ error: 'Нельзя зарегистрироваться на прошедшее событие' });
+    }
+
     // Проверяем количество участников
     const participants = await pool.query(
       'SELECT COUNT(*) FROM event_participants WHERE event_id = $1',
       [id]
     );
-
     const currentCount = parseInt(participants.rows[0].count);
-    const maxCount = event.rows[0].max_participants;
-
-    if (maxCount && currentCount >= maxCount) {
+    if (ev.max_participants && currentCount >= ev.max_participants) {
       return res.status(400).json({ error: 'Достигнуто максимальное количество участников' });
     }
 
@@ -677,8 +843,17 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
       [id, userId]
     );
 
-    res.json({ success: true, message: 'Вы успешно зарегистрировались на событие' });
+    if (ev.max_participants && currentCount + 1 >= ev.max_participants) {
+      const eventInfo = await pool.query('SELECT title, organizer_id FROM events WHERE id = $1', [id]);
+      await createNotification(
+        eventInfo.rows[0].organizer_id,
+        id,
+        'participants_limit_reached',
+        `Набор участников на событие «${eventInfo.rows[0].title}» закрыт — достигнут лимит (${ev.max_participants}).`
+      );
+    }
 
+    res.json({ success: true, message: 'Вы успешно зарегистрировались на событие' });
   } catch (error) {
     console.error('Ошибка регистрации на событие:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -689,17 +864,13 @@ app.post('/api/events/:id/participate', authenticateToken, async (req, res) => {
 // ИСПРАВЛЕННЫЕ ENDPOINTS НА ОСНОВЕ ВАШЕЙ БД
 // ==================================================================
 
-// Получение мероприятий, в которых пользователь участвует
 app.get('/api/events/participating', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log('🔄 Запрос мероприятий для участия пользователя:', userId);
-
+    await markCompletedEvents();
     const result = await pool.query(
-      `SELECT 
-        e.*, 
-        u.full_name as organizer_name,
-        (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participants_count
+      `SELECT e.*, COALESCE(e.organizer_display_name, u.username) AS organizer_name,
+              (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participant_count
        FROM events e 
        JOIN event_participants ep ON e.id = ep.event_id 
        JOIN users u ON e.organizer_id = u.id
@@ -707,44 +878,30 @@ app.get('/api/events/participating', authenticateToken, async (req, res) => {
        ORDER BY e.event_date, e.event_time`,
       [userId]
     );
-
-    console.log('✅ Найдено мероприятий для участия:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('❌ Ошибка получения мероприятий для участия:', error);
-    res.status(500).json({
-      error: 'Ошибка сервера',
-      message: error.message
-    });
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Получение мероприятий, которые пользователь организует
 app.get('/api/events/organizing', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log('🔄 Запрос организуемых мероприятий для пользователя:', userId);
-
+    await markCompletedEvents();
     const result = await pool.query(
-      `SELECT 
-        e.*, 
-        u.full_name as organizer_name,
-        (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participants_count
+      `SELECT e.*, COALESCE(e.organizer_display_name, u.username) AS organizer_name,
+              (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participant_count
        FROM events e 
        JOIN users u ON e.organizer_id = u.id
        WHERE e.organizer_id = $1 AND e.status = 'active'
        ORDER BY e.event_date, e.event_time`,
       [userId]
     );
-
-    console.log('✅ Найдено организуемых мероприятий:', result.rows.length);
     res.json(result.rows);
   } catch (error) {
-    console.error('❌ Ошибка получения организуемых мероприятий:', error);
-    res.status(500).json({
-      error: 'Ошибка сервера',
-      message: error.message
-    });
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -753,11 +910,11 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     console.log('🔄 Запрос прошедших мероприятий для пользователя:', userId);
-
+    await markCompletedEvents();
     const result = await pool.query(
       `SELECT 
         e.*, 
-        u.full_name as organizer_name,
+        COALESCE(e.organizer_display_name, u.username) AS organizer_name,
         (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participants_count,
         CASE 
           WHEN e.organizer_id = $1 THEN 'organizer'
@@ -781,6 +938,34 @@ app.get('/api/events/past', authenticateToken, async (req, res) => {
       error: 'Ошибка сервера',
       message: error.message
     });
+  }
+});
+
+
+// ==================================================================
+// Получение деталей события
+// ==================================================================
+app.get('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await markCompletedEvents();
+    const result = await pool.query(
+      `SELECT e.*, COALESCE(e.organizer_display_name, u.username) AS organizer_name,
+              (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) as participant_count
+       FROM events e
+       JOIN users u ON e.organizer_id = u.id
+       WHERE e.id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Событие не найдено' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка получения события:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
@@ -860,22 +1045,26 @@ app.get('/api/debug/db-test', authenticateToken, async (req, res) => {
   }
 });
 
-// Проверка событий пользователя
 app.get('/api/debug/user-events/:userId', authenticateToken, async (req, res) => {
   try {
     const userId = req.params.userId;
 
-    // События как организатор
+    // События как организатор (с именем организатора)
     const organizingResult = await pool.query(
-      'SELECT * FROM events WHERE organizer_id = $1',
+      `SELECT e.*, COALESCE(e.organizer_display_name, u.username) AS organizer_name 
+       FROM events e
+       JOIN users u ON e.organizer_id = u.id
+       WHERE e.organizer_id = $1`,
       [userId]
     );
 
-    // События как участник
+    // События как участник (с именем организатора)
     const participatingResult = await pool.query(
-      `SELECT e.* FROM events e 
-             JOIN event_participants ep ON e.id = ep.event_id 
-             WHERE ep.user_id = $1`,
+      `SELECT e.*, COALESCE(e.organizer_display_name, u.username) AS organizer_name
+       FROM events e
+       JOIN event_participants ep ON e.id = ep.event_id
+       JOIN users u ON e.organizer_id = u.id
+       WHERE ep.user_id = $1`,
       [userId]
     );
 
@@ -927,9 +1116,279 @@ app.delete('/api/events/:id/participate', authenticateToken, async (req, res) =>
       [id, userId]
     );
 
+    const eventInfo = await pool.query('SELECT title, organizer_id FROM events WHERE id = $1', [id]);
+    const userInfo = await pool.query('SELECT username FROM users WHERE id = $1', [userId]);
+    await createNotification(
+      eventInfo.rows[0].organizer_id,
+      id,
+      'participant_left',
+      `Пользователь @${userInfo.rows[0].username} отказался от участия в событии "${eventInfo.rows[0].title}".`
+    );
+
     res.json({ success: true, message: 'Участие в событии отменено' });
   } catch (error) {
     console.error('Ошибка отмены участия в событии:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Отмена события с указанием причины (только организатор)
+app.post('/api/events/:id/cancel', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.userId;
+  const { cancel_reason } = req.body; // причина из запроса
+
+  try {
+    // Проверяем, что пользователь является организатором
+    const event = await pool.query(
+      'SELECT organizer_id, status, title FROM events WHERE id = $1',
+      [id]
+    );
+
+    if (event.rows.length === 0) {
+      return res.status(404).json({ error: 'Событие не найдено' });
+    }
+
+    if (event.rows[0].organizer_id !== userId) {
+      return res.status(403).json({ error: 'Недостаточно прав для отмены' });
+    }
+
+    if (event.rows[0].status === 'cancelled') {
+      return res.status(400).json({ error: 'Событие уже отменено' });
+    }
+
+    // Обновляем статус и сохраняем причину
+    await pool.query(
+      `UPDATE events SET status = 'cancelled', cancel_reason = $2 WHERE id = $1`,
+      [id, cancel_reason || null]
+    );
+
+    // Уведомляем всех участников об отмене
+    const participants = await pool.query('SELECT user_id FROM event_participants WHERE event_id = $1', [id]);
+    const title = event.rows[0].title; // event уже получен ранее
+    for (const part of participants.rows) {
+      await createNotification(
+        part.user_id,
+        id,
+        'event_cancelled',
+        `Событие «${title}» отменено организатором. Причина: ${cancel_reason || 'не указана'}`
+      );
+    }
+
+    res.json({ success: true, message: 'Событие отменено' });
+  } catch (error) {
+    console.error('Ошибка отмены события:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ==================================================================
+// Отзывы
+// ==================================================================
+
+// Создать отзыв
+app.post('/api/reviews', authenticateToken, async (req, res) => {
+  const { event_id, reviewee_id, rating, comment } = req.body;
+  const reviewerId = req.user.userId;
+
+  if (!event_id || !reviewee_id || !rating) {
+    return res.status(400).json({ error: 'Необходимы event_id, reviewee_id и rating' });
+  }
+  if (rating < 1 || rating > 5) {
+    return res.status(400).json({ error: 'Рейтинг должен быть от 1 до 5' });
+  }
+  if (reviewerId === reviewee_id) {
+    return res.status(400).json({ error: 'Нельзя оставить отзыв самому себе' });
+  }
+
+  try {
+    // Проверим, что событие завершено (дата прошла или статус completed/cancelled)
+    const event = await pool.query('SELECT * FROM events WHERE id = $1', [event_id]);
+    if (event.rows.length === 0) return res.status(404).json({ error: 'Событие не найдено' });
+
+    const ev = event.rows[0];
+    // Берём только дату в формате YYYY-MM-DD и добавляем время события с московским смещением
+    const eventDateOnly = ev.event_date instanceof Date
+      ? ev.event_date.toISOString().split('T')[0]
+      : String(ev.event_date).split('T')[0];
+    const eventDateTime = new Date(`${eventDateOnly}T${ev.event_time}+03:00`);
+    const now = new Date();
+    const isPast = eventDateTime <= now;
+    const isTerminal = ['completed', 'cancelled'].includes(ev.status);
+    if (!isPast && !isTerminal) {
+      return res.status(400).json({ error: 'Нельзя оставить отзыв до завершения мероприятия' });
+    }
+
+    // Проверим, что reviewer_id и reviewee_id связаны с событием
+    const isOrganizer = (ev.organizer_id === reviewerId);
+    const isParticipantResp = await pool.query(
+      'SELECT 1 FROM event_participants WHERE event_id = $1 AND user_id = $2',
+      [event_id, reviewerId]
+    );
+    const isParticipant = isParticipantResp.rows.length > 0;
+
+    if (!isOrganizer && !isParticipant) {
+      return res.status(400).json({ error: 'Вы не являетесь участником или организатором этого события' });
+    }
+
+    // Определим допустимость: организатор → участник, участник → организатор
+    if (isOrganizer) {
+      // Организатор может оценить только участника (не себя)
+      const targetIsParticipant = await pool.query(
+        'SELECT 1 FROM event_participants WHERE event_id = $1 AND user_id = $2',
+        [event_id, reviewee_id]
+      );
+      if (targetIsParticipant.rows.length === 0) {
+        return res.status(400).json({ error: 'Вы можете оставить отзыв только участнику этого мероприятия' });
+      }
+    } else {
+      // Участник может оценить только организатора
+      if (ev.organizer_id !== reviewee_id) {
+        return res.status(400).json({ error: 'Вы можете оставить отзыв только организатору этого мероприятия' });
+      }
+    }
+
+    // Вставка
+    await pool.query(
+      `INSERT INTO reviews (event_id, reviewer_id, reviewee_id, rating, comment)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [event_id, reviewerId, reviewee_id, rating, comment || null]
+    );
+
+    // Опционально: уведомление
+    const reviewerInfo = await pool.query('SELECT username FROM users WHERE id = $1', [reviewerId]);
+    const eventTitle = ev.title;
+    await createNotification(
+      reviewee_id,
+      event_id,
+      'new_review',
+      `Вам оставили отзыв на событие "${eventTitle}" (${'⭐'.repeat(rating)})`
+    );
+
+    res.status(201).json({ success: true, message: 'Отзыв оставлен' });
+  } catch (error) {
+    if (error.code === '23505') { // unique violation
+      return res.status(400).json({ error: 'Вы уже оставили отзыв этому пользователю за это событие' });
+    }
+    console.error('Ошибка создания отзыва:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Проверка возможности оставить отзыв
+app.get('/api/reviews/check', authenticateToken, async (req, res) => {
+  const { event_id, reviewee_id } = req.query;
+  const reviewerId = req.user.userId;
+  if (!event_id || !reviewee_id) {
+    return res.status(400).json({ error: 'Укажите event_id и reviewee_id' });
+  }
+  try {
+    // Уже есть отзыв?
+    const existing = await pool.query(
+      'SELECT 1 FROM reviews WHERE event_id = $1 AND reviewer_id = $2 AND reviewee_id = $3',
+      [event_id, reviewerId, reviewee_id]
+    );
+    if (existing.rows.length > 0) {
+      return res.json({ can_review: false, reason: 'Вы уже оставили отзыв' });
+    }
+
+    // Завершено ли событие?
+    const event = await pool.query('SELECT * FROM events WHERE id = $1', [event_id]);
+    if (event.rows.length === 0) return res.status(404).json({ error: 'Событие не найдено' });
+    const ev = event.rows[0];
+    // Берём только дату в формате YYYY-MM-DD и добавляем время события с московским смещением
+    const eventDateOnly = ev.event_date instanceof Date
+      ? ev.event_date.toISOString().split('T')[0]
+      : String(ev.event_date).split('T')[0];
+    const eventDateTime = new Date(`${eventDateOnly}T${ev.event_time}+03:00`);
+    const now = new Date();
+    if (eventDateTime > now && ev.status === 'active') {
+      return res.json({ can_review: false, reason: 'Мероприятие ещё не завершилось' });
+    }
+
+    // Права
+    const isOrganizer = (ev.organizer_id === reviewerId);
+    const isParticipantResp = await pool.query(
+      'SELECT 1 FROM event_participants WHERE event_id = $1 AND user_id = $2',
+      [event_id, reviewerId]
+    );
+    const isParticipant = isParticipantResp.rows.length > 0;
+
+    if (!isOrganizer && !isParticipant) {
+      return res.json({ can_review: false, reason: 'Вы не участвовали в этом мероприятии' });
+    }
+
+    if (isOrganizer) {
+      const target = await pool.query(
+        'SELECT 1 FROM event_participants WHERE event_id = $1 AND user_id = $2',
+        [event_id, reviewee_id]
+      );
+      if (target.rows.length === 0) {
+        return res.json({ can_review: false, reason: 'Этот пользователь не является участником' });
+      }
+    } else {
+      if (ev.organizer_id !== parseInt(reviewee_id)) {
+        return res.json({ can_review: false, reason: 'Вы можете оставить отзыв только организатору' });
+      }
+    }
+
+    return res.json({ can_review: true });
+  } catch (error) {
+    console.error('Ошибка проверки отзыва:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Получить отзывы о пользователе
+app.get('/api/users/:userId/reviews', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT r.*, u.username AS reviewer_username, e.title AS event_title
+       FROM reviews r
+       JOIN users u ON r.reviewer_id = u.id
+       JOIN events e ON r.event_id = e.id
+       WHERE r.reviewee_id = $1
+       ORDER BY r.created_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения отзывов:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Средний рейтинг пользователя
+app.get('/api/users/:userId/rating', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT COALESCE(ROUND(AVG(rating), 1), 0) AS average_rating, COUNT(*) AS total_reviews FROM reviews WHERE reviewee_id = $1',
+      [userId]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка получения рейтинга:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Получить список участников события
+app.get('/api/events/:id/participants', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.username, u.full_name
+       FROM event_participants ep
+       JOIN users u ON ep.user_id = u.id
+       WHERE ep.event_id = $1`,
+      [id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения участников:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
@@ -939,13 +1398,72 @@ app.delete('/api/events/:id/participate', authenticateToken, async (req, res) =>
 // ==================================================================
 app.use(express.static(path.join(__dirname, 'frontend')));
 
-// Для всех GET запросов возвращаем index.html (кроме API маршрутов)
+// ==================================================================
+// Уведомления
+// ==================================================================
+
+// Получить уведомления текущего пользователя (по умолчанию непрочитанные)
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { unread_only } = req.query; // если 'true' – только непрочитанные
+    let query = `SELECT n.*, e.title AS event_title FROM notifications n JOIN events e ON n.event_id = e.id WHERE n.user_id = $1`;
+    const params = [userId];
+
+    if (unread_only === 'true') {
+      query += ' AND n.is_read = FALSE';
+    }
+
+    query += ' ORDER BY n.created_at DESC LIMIT 50';
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения уведомлений:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Отметить уведомление как прочитанное
+app.post('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+    const result = await pool.query(
+      'UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2 RETURNING *',
+      [id, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Уведомление не найдено' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка отметки уведомления:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ==================================================================
+// Явная обработка корневого маршрута – отдаём welcome.html
+// ==================================================================
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend', 'welcome.html'));
+});
+
+// ==================================================================
+// Для всех остальных GET-запросов (кроме API) отдаём запрошенный файл или index.html
+// ==================================================================
 app.get('*', (req, res) => {
   if (req.originalUrl.startsWith('/api/')) {
-    // Для API routes возвращаем 404
     return res.status(404).json({ error: 'API endpoint not found' });
   }
-  res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+  // Пытаемся найти запрошенный файл в папке frontend (например, aut.html, reg.html, welcome.html)
+  const filePath = path.join(__dirname, 'frontend', req.path);
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    res.sendFile(filePath);
+  } else {
+    // Всё остальное (включая index.html) отдаём как SPA-роутинг
+    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+  }
 });
 
 // ==================================================================
@@ -960,7 +1478,6 @@ app.use('/api/*', (req, res) => {
 // Запуск сервера
 // ==================================================================
 const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0';
-app.listen(PORT, HOST, () => {
-  console.log(`Server running on http://${HOST}:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Сервер запущен на порту ${PORT}`);
 });
