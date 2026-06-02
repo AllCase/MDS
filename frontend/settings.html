@@ -842,7 +842,11 @@
 
                 document.getElementById('emailInput').value = user.email || '';
                 document.getElementById('phoneInput').value = user.phone || '';
-                document.getElementById('birthDateInput').value = user.birth_date || '';
+                let birthDate = user.birth_date;
+                if (birthDate && birthDate.includes('T')) {
+                    birthDate = birthDate.split('T')[0];
+                }
+                document.getElementById('birthDateInput').value = birthDate || '';
                 document.getElementById('cityInput').value = user.city || '';
                 document.getElementById('aboutMeInput').value = user.bio || '';
             }
