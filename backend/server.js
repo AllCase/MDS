@@ -227,8 +227,7 @@ app.post('/api/login', async (req, res) => {
   try {
     // Ищем пользователя по email или username
     const user = await pool.query(
-      `SELECT * FROM users 
-       WHERE email = $1 OR username = $1`,
+      `SELECT * FROM users WHERE email = $1`,
       [login]
     );
 
@@ -367,28 +366,26 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
       }
     }
 
-    // Обновление данных (исправленный запрос)
+    if (phone) {
+      const phoneExists = await pool.query(
+        'SELECT id FROM users WHERE phone = $1 AND id != $2',
+        [phone, userId]
+      );
+      if (phoneExists.rows.length > 0) {
+        return res.status(400).json({ error: 'Этот номер телефона уже используется другим пользователем' });
+      }
+    }
+
     const result = await pool.query(
       `UPDATE users SET
-        username = $1,
-        email = $2,
-        phone = $3,
-        birth_date = $4,
-        city = $5,
-        bio = $6
-      WHERE id = $7
-      RETURNING 
-        id, username, email, full_name, created_at,
-        phone, birth_date, city, bio AS about_me`,
-      [
-        username,
-        email,
-        phone || null,
-        birth_date || null,
-        city || null,
-        bio || null,
-        userId
-      ]
+    email = $1,
+    phone = $2,
+    birth_date = $3,
+    city = $4,
+    bio = $5
+  WHERE id = $6
+  RETURNING id, username, email, full_name, created_at, phone, birth_date, city, bio AS about_me`,
+      [email, phone || null, birth_date || null, city || null, bio || null, userId]
     );
 
     res.json(result.rows[0]);
