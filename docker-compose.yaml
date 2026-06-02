@@ -2,12 +2,33 @@ version: '3.8'
 
 services:
   backend:
-    build: .              # Dockerfile в корне
+    build: .
+    container_name: mds-backend
+    restart: unless-stopped
     environment:
       NODE_ENV: production
-      DB_HOST: 176.53.160.66
+      DB_HOST: db
       DB_PORT: 5432
-      DB_USER: gen_user
-      DB_PASSWORD: YZ>|^DuMF+P7LX
-      DB_NAME: default_db
-      DB_SSL: "false"
+      DB_USER: mds_user
+      DB_PASSWORD: mds_password
+      DB_NAME: mds_db
+      DB_SSL: "true"
+      DB_SSL_CA: "/app/certs/root.crt"
+      JWT_SECRET: your_super_secret_key_change_me
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: mds-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mds_user
+      POSTGRES_PASSWORD: mds_password
+      POSTGRES_DB: mds_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  postgres_data:
