@@ -286,25 +286,17 @@ app.post('/api/login', async (req, res) => {
 // ==================================================================
 app.get('/api/user', authenticateToken, async (req, res) => {
   try {
-    console.log('User ID from token:', req.user.userId);
-
+    const targetId = req.query.id ? parseInt(req.query.id) : req.user.userId;
     const user = await pool.query(
-      `SELECT 
-        id, username, email, full_name, created_at,
+      `SELECT id, username, email, full_name, created_at,
         phone, birth_date, city, bio AS about_me 
        FROM users WHERE id = $1`,
-      [req.user.userId]
+      [targetId]
     );
-
-    console.log('User found:', user.rows[0]);
-
-    if (user.rows.length === 0) {
-      return res.status(404).json({ error: 'Пользователь не найден' });
-    }
-
+    if (user.rows.length === 0) return res.status(404).json({ error: 'Пользователь не найден' });
     res.json(user.rows[0]);
   } catch (error) {
-    console.error('Ошибка получения данных:', error);
+    console.error(error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
@@ -1395,7 +1387,6 @@ app.get('/api/users/:userId/rating', async (req, res) => {
   }
 });
 
-// Получить список участников события
 app.get('/api/events/:id/participants', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
