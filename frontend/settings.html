@@ -839,13 +839,6 @@
                     headerUserName.textContent = user.full_name || 'Пользователь';
                 }
 
-                // Обновляем имя в выпадающем меню профиля
-                const profileFullName = document.getElementById('profileFullName');
-                if (profileFullName) {
-                    profileFullName.textContent = user.full_name || 'Пользователь';
-                }
-
-                document.getElementById('usernameInput').value = user.username || '';
                 document.getElementById('emailInput').value = user.email || '';
                 document.getElementById('phoneInput').value = user.phone || '';
                 document.getElementById('birthDateInput').value = user.birth_date || '';
@@ -859,7 +852,6 @@
                 e.preventDefault();
 
                 const formData = {
-                    username: document.getElementById('usernameInput').value,
                     email: document.getElementById('emailInput').value,
                     phone: document.getElementById('phoneInput').value,
                     birth_date: document.getElementById('birthDateInput').value,
