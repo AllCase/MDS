@@ -1400,10 +1400,14 @@ app.get('/api/events/:id/participants', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
-      `SELECT u.id, u.username, u.full_name
+      `SELECT u.id, u.username, u.full_name,
+        COALESCE(ROUND(AVG(r.rating), 1), 0) AS average_rating,
+        COUNT(r.id) AS total_reviews
        FROM event_participants ep
        JOIN users u ON ep.user_id = u.id
-       WHERE ep.event_id = $1`,
+       LEFT JOIN reviews r ON r.reviewee_id = u.id
+       WHERE ep.event_id = $1
+       GROUP BY u.id, u.username, u.full_name`,
       [id]
     );
     res.json(result.rows);
