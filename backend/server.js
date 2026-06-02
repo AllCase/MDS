@@ -1387,6 +1387,34 @@ app.get('/api/users/:userId/rating', async (req, res) => {
   }
 });
 
+// Получить предстоящие события пользователя (организатор или участник)
+app.get('/api/users/:userId/upcoming-events', authenticateToken, async (req, res) => {
+  const { userId } = req.params;
+  try {
+    await markCompletedEvents();
+    const result = await pool.query(
+      `SELECT DISTINCT e.id, e.title, e.event_date, e.event_time, e.location,
+              COALESCE(e.organizer_display_name, u.username) AS organizer_name,
+              (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id) AS participant_count,
+              e.max_participants,
+              CASE WHEN e.organizer_id = $1 THEN 'organizer' ELSE 'participant' END AS user_role
+       FROM events e
+       LEFT JOIN users u ON e.organizer_id = u.id
+       LEFT JOIN event_participants ep ON e.id = ep.event_id
+       WHERE (e.organizer_id = $1 OR ep.user_id = $1)
+         AND e.status = 'active'
+         AND e.event_date >= CURRENT_DATE
+       ORDER BY e.event_date, e.event_time
+       LIMIT 10`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Ошибка получения предстоящих событий:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 app.get('/api/events/:id/participants', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
