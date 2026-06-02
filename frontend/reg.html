@@ -179,7 +179,8 @@
                     <div class="mb-3">
                         <label for="username" class="form-label">Имя пользователя*</label>
                         <input type="text" class="form-control" id="username" placeholder="Придумайте уникальное имя"
-                            required>
+                            maxlength="20" pattern="[A-Za-z0-9_]+"
+                            title="Только латинские буквы, цифры и знак подчёркивания, без пробелов" required>
                         <div class="error-message" id="usernameError"></div>
                     </div>
 
@@ -337,6 +338,18 @@
             const firstName = document.getElementById('firstName').value;
             const lastName = document.getElementById('lastName').value;
             const username = document.getElementById('username').value; // Новое поле
+            if (username.includes(' ')) {
+                document.getElementById('usernameError').textContent = 'Имя пользователя не должно содержать пробелов';
+                return;
+            }
+            if (username.length > 20) {
+                document.getElementById('usernameError').textContent = 'Имя пользователя не должно превышать 20 символов';
+                return;
+            }
+            if (!/^[A-Za-z0-9_]+$/.test(username)) {
+                document.getElementById('usernameError').textContent = 'Разрешены только латинские буквы, цифры и знак подчёркивания';
+                return;
+            }
             const email = document.getElementById('regEmail').value;
             const password = document.getElementById('regPassword').value;
 
