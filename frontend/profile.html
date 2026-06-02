@@ -369,47 +369,13 @@
                         <a href="my_events.html" class="btn btn-sm btn-outline-primary">Все мероприятия</a>
                     </div>
                     <div class="card-body" id="upcomingEvents">
-                        <!-- События будут загружены динамически -->
-                        <div class="event-timeline position-relative mb-4 pb-2">
-                            <div class="d-flex justify-content-between">
-                                <h6 class="mb-1">Забег на 10км в Парке Горького</h6>
-                                <span class="badge bg-success">Завтра</span>
+                        <div class="card-body" id="upcomingEventsContainer">
+                            <div class="text-center py-3" id="upcomingEventsLoading">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
                             </div>
-                            <p class="mb-0 text-muted"><i class="bi bi-clock me-1"></i> 19:00, Парк Горького</p>
-                            <div class="mt-2">
-                                <span class="badge bg-light text-dark"><i class="bi bi-people me-1"></i> 45
-                                    участников</span>
-                                <span class="badge bg-light text-dark"><i class="bi bi-person-check me-1"></i> Вы
-                                    участвуете</span>
-                            </div>
-                        </div>
-
-                        <div class="event-timeline position-relative mb-4 pb-2">
-                            <div class="d-flex justify-content-between">
-                                <h6 class="mb-1">Велосипедный тур "Кольцо Москвы"</h6>
-                                <span class="badge bg-primary">Через 3 дня</span>
-                            </div>
-                            <p class="mb-0 text-muted"><i class="bi bi-clock me-1"></i> 10:00, Воробьевы горы</p>
-                            <div class="mt-2">
-                                <span class="badge bg-light text-dark"><i class="bi bi-people me-1"></i> 127
-                                    участников</span>
-                                <span class="badge bg-light text-dark"><i class="bi bi-person-check me-1"></i> Вы
-                                    участвуете</span>
-                            </div>
-                        </div>
-
-                        <div class="event-timeline position-relative pb-2">
-                            <div class="d-flex justify-content-between">
-                                <h6 class="mb-1">Футбольный турнир "Летний кубок"</h6>
-                                <span class="badge bg-info">Через 5 дней</span>
-                            </div>
-                            <p class="mb-0 text-muted"><i class="bi bi-clock me-1"></i> 14:00, Стадион "Лужники"</p>
-                            <div class="mt-2">
-                                <span class="badge bg-light text-dark"><i class="bi bi-people me-1"></i> 18/24
-                                    участников</span>
-                                <span class="badge bg-light text-dark"><i class="bi bi-person-check me-1"></i> Вы
-                                    участвуете</span>
-                            </div>
+                            <div id="upcomingEventsList"></div>
                         </div>
                     </div>
                 </div>
@@ -639,6 +605,77 @@
             }
         }
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function (m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        async function loadUpcomingEvents() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            const userId = currentUserId; // должна быть установлена ранее
+            if (!userId) return;
+
+            const container = document.getElementById('upcomingEventsList');
+            const loadingDiv = document.getElementById('upcomingEventsLoading');
+
+            try {
+                const response = await fetch(`/api/users/${userId}/upcoming-events`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Ошибка загрузки');
+                const events = await response.json();
+
+                loadingDiv.style.display = 'none';
+
+                if (events.length === 0) {
+                    container.innerHTML = '<p class="text-muted text-center">У вас нет предстоящих мероприятий</p>';
+                    return;
+                }
+
+                let html = '';
+                events.forEach(event => {
+                    const eventDate = new Date(event.event_date);
+                    const formattedDate = eventDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+                    const formattedTime = event.event_time ? event.event_time.substring(0, 5) : '';
+                    const isOrganizer = event.user_role === 'organizer';
+                    const badgeText = isOrganizer ? 'Организую' : 'Участвую';
+                    const badgeClass = isOrganizer ? 'bg-primary' : 'bg-success';
+
+                    const participantsCount = event.participant_count || 0;
+                    const maxParticipants = event.max_participants || '∞';
+                    const participantsText = maxParticipants !== '∞' ? `${participantsCount}/${maxParticipants}` : participantsCount;
+
+                    html += `
+                <div class="event-timeline position-relative mb-4 pb-2">
+                    <div class="d-flex justify-content-between">
+                        <h6 class="mb-1">${escapeHtml(event.title)}</h6>
+                        <span class="badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                    <p class="mb-0 text-muted">
+                        <i class="bi bi-clock me-1"></i> ${formattedDate} в ${formattedTime}<br>
+                        <i class="bi bi-geo-alt me-1"></i> ${escapeHtml(event.location || '—')}
+                    </p>
+                    <div class="mt-2">
+                        <span class="badge bg-light text-dark"><i class="bi bi-people me-1"></i> ${participantsText} участников</span>
+                        <span class="badge bg-light text-dark"><i class="bi bi-person me-1"></i> Организатор: ${escapeHtml(event.organizer_name)}</span>
+                    </div>
+                </div>
+            `;
+                });
+                container.innerHTML = html;
+            } catch (error) {
+                console.error(error);
+                loadingDiv.style.display = 'none';
+                container.innerHTML = '<p class="text-danger text-center">Ошибка загрузки мероприятий</p>';
+            }
+        }
+
         // Загрузка непрочитанных уведомлений
         async function loadNotifications() {
             const token = localStorage.getItem('authToken');
@@ -696,6 +733,8 @@
 
             // Теперь можно загрузить рейтинг и отзывы
             await loadProfileRating();
+
+            await loadUpcomingEvents();
 
             // Уведомления можно запустить без ожидания
             loadNotifications();
