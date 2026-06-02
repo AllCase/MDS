@@ -376,6 +376,18 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
       }
     }
 
+    if (birth_date) {
+      const birthDateObj = new Date(birth_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (birthDateObj > today) {
+        return res.status(400).json({ error: 'Дата рождения не может быть в будущем' });
+      }
+      if (birthDateObj < new Date('1900-01-01')) {
+        return res.status(400).json({ error: 'Некорректный год рождения (должен быть не ранее 1900)' });
+      }
+    }
+
     const result = await pool.query(
       `UPDATE users SET
     email = $1,
