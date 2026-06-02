@@ -10,20 +10,20 @@
     <script>
         // Система защиты авторизации
         (function () {
-            // Разрешенные страницы без авторизации
-            const allowedPages = ['aut.html', 'reg.html'];
+            // Разрешенные страницы без авторизации (теперь с welcome.html)
+            const allowedPages = ['welcome.html', 'aut.html', 'reg.html'];
             const currentPage = window.location.pathname.split('/').pop() || 'index.html';
 
             const token = localStorage.getItem('authToken');
             const isLoggedIn = !!token;
 
-            // Если пользователь не авторизован и пытается получить доступ к защищенной странице
+            // Если не авторизован и пытается попасть на защищённую страницу -> на приветственную
             if (!isLoggedIn && !allowedPages.includes(currentPage)) {
                 sessionStorage.setItem('redirectUrl', window.location.href);
-                window.location.href = 'aut.html';
+                window.location.href = 'welcome.html';
             }
 
-            // Если пользователь авторизован и пытается получить доступ к странице входа/регистрации
+            // Если авторизован и пытается зайти на страницы входа/регистрации/приветствия -> на главную
             if (isLoggedIn && allowedPages.includes(currentPage)) {
                 window.location.href = 'index.html';
             }
@@ -113,6 +113,24 @@
                     </li>
                 </ul>
                 <div class="d-flex align-items-center">
+                    <!-- Уведомления (слева) -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-light position-relative" type="button" data-bs-toggle="dropdown"
+                            id="notificationsDropdown">
+                            <i class="bi bi-bell fs-5"></i>
+                            <span id="notificationsCount"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end"
+                            style="width: 380px; max-height: 400px; overflow-y: auto; overflow-x: hidden; padding: 0;"
+                            id="notificationsMenu">
+                            <h6 class="dropdown-header px-3 pt-2">Уведомления</h6>
+                            <div id="notificationsList"
+                                style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; padding: 0 8px 8px;">
+                                <div class="dropdown-item-text text-muted px-3 py-2">Загрузка...</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
                             data-bs-toggle="dropdown">
@@ -150,7 +168,6 @@
                                 <option value="all">Любая</option>
                                 <option value="today">Сегодня</option>
                                 <option value="tomorrow">Завтра</option>
-                                <option value="weekend">На выходных</option>
                             </select>
                         </div>
 
@@ -164,15 +181,40 @@
                                     <i class="bi bi-chevron-up"></i>
                                 </span>
                             </button>
-
                             <div class="collapse" id="sportsCollapse">
                                 <div class="mt-2" id="sportsFilterContainer">
-                                    <!-- Фильтры видов спорта будут добавлены динамически -->
+                                    <!-- Чекбоксы видов спорта будут добавлены динамически -->
                                 </div>
                             </div>
                         </div>
 
-                        <button class="btn btn-primary w-100" id="applyFiltersBtn">Применить фильтры</button>
+                        <div class="mb-3">
+                            <button class="btn btn-link p-0 text-start sports-filter-btn" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#typesCollapse" aria-expanded="false"
+                                aria-controls="typesCollapse">
+                                Тип мероприятия
+                                <span>
+                                    <i class="bi bi-chevron-down"></i>
+                                    <i class="bi bi-chevron-up"></i>
+                                </span>
+                            </button>
+                            <div class="collapse" id="typesCollapse">
+                                <div class="mt-2" id="typesFilterContainer">
+                                    <!-- Чекбоксы типов будут добавлены динамически -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Сортировка</label>
+                            <select class="form-select" id="sortSelect">
+                                <option value="date_asc">По дате (сначала ближайшие)</option>
+                                <option value="date_desc">По дате (сначала дальние)</option>
+                                <option value="popular">По популярности (больше участников)</option>
+                                <option value="price_asc">Сначала бесплатные</option>
+                            </select>
+                        </div>
+                        <div class="mt-2 text-muted small text-center" id="eventsCountInfo"></div>
                         <button class="btn btn-outline-secondary w-100 mt-2" id="resetFiltersBtn">Сбросить
                             фильтры</button>
                     </div>
@@ -260,6 +302,24 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+
+
+        let currentUserId = null;
+        let allEventsRaw = [];         // все активные события с сервера
+        let participatingIdsSet = new Set();  // ID событий, где пользователь участвует
+        let organizerRatingsCache = new Map();
+
+        const sportNames = {
+            running: 'Бег',
+            cycling: 'Велоспорт',
+            football: 'Футбол',
+            basketball: 'Баскетбол',
+            tennis: 'Теннис',
+            volleyball: 'Волейбол',
+            swimming: 'Плавание',
+            yoga: 'Йога'
+        };
+
         // Функция для выхода из системы
         function logout() {
             localStorage.removeItem('authToken');
@@ -283,6 +343,7 @@
 
                 if (response.ok) {
                     const user = await response.json();
+                    currentUserId = user.id;   // ← сохраняем ID
                     document.getElementById('headerUserName').textContent = user.full_name || 'Пользователь';
                     return user;
                 }
@@ -292,67 +353,72 @@
             return null;
         }
 
-        // Функция для загрузки событий
-        async function loadEvents(filters = {}) {
+        async function loadEvents() {
             try {
-                // Показать индикатор загрузки
                 document.getElementById('loadingIndicator').classList.remove('d-none');
                 document.getElementById('noEventsMessage').classList.add('d-none');
 
-                // Создать URL с параметрами фильтрации
-                const params = new URLSearchParams();
-                if (filters.sportType) params.append('sport_type', filters.sportType);
-                if (filters.date) {
-                    const today = new Date();
-                    switch (filters.date) {
-                        case 'today':
-                            params.append('date_from', today.toISOString().split('T')[0]);
-                            params.append('date_to', today.toISOString().split('T')[0]);
-                            break;
-                        case 'tomorrow':
-                            const tomorrow = new Date(today);
-                            tomorrow.setDate(tomorrow.getDate() + 1);
-                            params.append('date_from', tomorrow.toISOString().split('T')[0]);
-                            params.append('date_to', tomorrow.toISOString().split('T')[0]);
-                            break;
-                        case 'weekend':
-                            // Логика для выходных
-                            break;
+                const token = localStorage.getItem('authToken');
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+                // 1. Загружаем все активные события (без параметров)
+                const eventsRes = await fetch('/api/events', { headers });
+                if (!eventsRes.ok) throw new Error('Ошибка загрузки событий');
+                allEventsRaw = await eventsRes.json();
+
+                // 2. Загружаем ID событий, где пользователь участник
+                let participating = [];
+                if (token) {
+                    const partRes = await fetch('/api/events/participating', { headers });
+                    if (partRes.ok) participating = await partRes.json();
+                }
+                participatingIdsSet.clear();
+                participating.forEach(ev => participatingIdsSet.add(ev.id));
+
+                // 3. Загружаем рейтинги организаторов
+                const uniqueOrganizerIds = [...new Set(allEventsRaw.map(e => e.organizer_id))];
+                organizerRatingsCache.clear();
+                if (uniqueOrganizerIds.length > 0 && token) {
+                    try {
+                        const ratingPromises = uniqueOrganizerIds.map(orgId =>
+                            fetch(`/api/users/${orgId}/rating`, { headers })
+                                .then(r => r.ok ? r.json() : null)
+                                .catch(() => null)
+                        );
+                        const ratings = await Promise.all(ratingPromises);
+                        uniqueOrganizerIds.forEach((orgId, index) => {
+                            organizerRatingsCache.set(orgId, ratings[index]);
+                        });
+                    } catch (e) {
+                        console.warn('Не удалось загрузить рейтинги:', e);
                     }
                 }
-                if (filters.search) params.append('search', filters.search);
 
-                const url = `/api/events?${params.toString()}`;
-
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Ошибка загрузки событий');
-
-                const events = await response.json();
-                renderEvents(events);
+                // 4. Применяем клиентскую фильтрацию (первоначально без фильтров)
+                applyFiltersClient();
             } catch (error) {
                 console.error('Ошибка загрузки событий:', error);
-                document.getElementById('eventsContainer').innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-danger">${error.message}</div>
-                    </div>
-                `;
+                document.getElementById('eventsContainer').innerHTML = `<div class="col-12 alert alert-danger">${error.message}</div>`;
             } finally {
                 document.getElementById('loadingIndicator').classList.add('d-none');
             }
         }
 
         // Функция для отрисовки событий
-        function renderEvents(events) {
+        function renderEvents(events, ratingsMap = new Map()) {
             const container = document.getElementById('eventsContainer');
             container.innerHTML = '';
-
             if (events.length === 0) {
                 document.getElementById('noEventsMessage').classList.remove('d-none');
                 return;
             }
-
+            document.getElementById('noEventsMessage').classList.add('d-none');
             events.forEach(event => {
-                const eventCard = createEventCard(event);
+                const ratingData = ratingsMap.get(event.organizer_id);
+                const isParticipant = participatingIdsSet.has(event.id);
+                const isOrganizer = (event.organizer_id === currentUserId);
+                const isFull = event.max_participants && (event.participant_count || 0) >= event.max_participants;
+                const eventCard = createEventCard(event, ratingData, isParticipant, isFull, isOrganizer);
                 container.innerHTML += eventCard;
             });
         }
@@ -379,49 +445,66 @@
             }
         }
 
+        // Вспомогательная функция для получения текста типа события
+        function getEventTypeText(eventType) {
+            const types = {
+                'training': 'Тренировка',
+                'competition': 'Соревнование',
+                'tournament': 'Турнир',
+                'friendly': 'Товарищеская встреча',
+                'marathon': 'Марафон',
+                'workshop': 'Мастер-класс'
+            };
+            return types[eventType] || eventType || 'Мероприятие';
+        }
+
         // Функция для создания карточки события
-        function createEventCard(event) {
-            // Определяем иконку и текст для цены
+        function createEventCard(event, ratingData = null, isParticipant = false, isFull = false, isOrganizer = false) {
             const price = parseFloat(event.price);
             const priceText = price > 0 ? `${price.toFixed(2)} ₽` : 'Бесплатно';
             const priceClass = price > 0 ? 'bg-warning text-dark' : 'bg-danger';
 
-            // Иконка вида спорта
             const sportIcons = {
-                running: 'running.svg',
-                cycling: 'cycling.svg',
-                football: 'football.svg',
-                basketball: 'basketball.svg',
-                tennis: 'tennis.svg',
-                volleyball: 'volleyball.svg',
-                swimming: 'swimming.svg',
-                yoga: 'yoga.svg'
+                running: 'running.svg', cycling: 'cycling.svg', football: 'football.svg',
+                basketball: 'basketball.svg', tennis: 'tennis.svg', volleyball: 'volleyball.svg',
+                swimming: 'swimming.svg', yoga: 'yoga.svg'
             };
-
             const sportIcon = sportIcons[event.sport_type] || 'default.svg';
+            const sportName = sportNames[event.sport_type] || event.sport_type;
 
-            // Форматируем дату и время с защитой от ошибок
             let formattedDate = event.event_date;
             let formattedTime = event.event_time.substring(0, 5);
-
             const eventDateObj = createEventDate(event);
             if (eventDateObj) {
-                formattedDate = eventDateObj.toLocaleDateString('ru-RU', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                });
-
-                formattedTime = eventDateObj.toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                formattedDate = eventDateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+                formattedTime = eventDateObj.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
             }
 
-            // Участники
             const participantsText = event.max_participants
                 ? `${event.participant_count || 0}/${event.max_participants}`
                 : (event.participant_count || 0);
+            const ageRestrictionText = event.age_restriction > 0 ? `${event.age_restriction}+` : 'Без ограничений';
+            const eventTypeText = getEventTypeText(event.event_type);
+            const organizerName = event.organizer_name || 'Неизвестный организатор';
+
+            let ratingHTML = '';
+            if (ratingData && ratingData.total_reviews > 0) {
+                const stars = '⭐'.repeat(Math.round(ratingData.average_rating));
+                ratingHTML = `<span class="ms-2 small">${stars} ${ratingData.average_rating} (${ratingData.total_reviews})</span>`;
+            } else {
+                ratingHTML = '<span class="ms-2 small text-muted">нет отзывов</span>';
+            }
+
+            let actionButton = '';
+            if (!isOrganizer) {
+                if (isParticipant) {
+                    actionButton = '<button class="btn btn-secondary" disabled>Вы участвуете</button>';
+                } else if (isFull) {
+                    actionButton = '<button class="btn btn-secondary" disabled>Набор закрыт</button>';
+                } else {
+                    actionButton = `<button class="btn btn-primary participate-btn" data-event-id="${event.id}">Участвовать</button>`;
+                }
+            }
 
             return `
         <div class="col">
@@ -433,15 +516,23 @@
                         <h5 class="card-title">${event.title}</h5>
                         <img src="${sportIcon}" class="sport-icon" alt="${event.sport_type}">
                     </div>
+                    <div class="mb-2">
+                        <span class="badge bg-light text-dark"><i class="bi bi-activity me-1"></i>${sportName}</span>
+                        <span class="badge bg-light text-dark ms-1"><i class="bi bi-tag me-1"></i>${eventTypeText}</span>
+                    </div>
                     <p class="card-text">
                         <i class="bi bi-calendar"></i> ${formattedDate}<br>
                         <i class="bi bi-clock"></i> ${formattedTime}<br>
                         <i class="bi bi-geo-alt"></i> ${event.location}<br>
-                        <i class="bi bi-people"></i> ${participantsText} участников
+                        <i class="bi bi-people"></i> ${participantsText} участников<br>
+                        <i class="bi bi-person-badge"></i> Возраст: ${ageRestrictionText}
                     </p>
+                    <div class="mt-2 small text-muted border-top pt-2">
+                        <div><i class="bi bi-person me-1"></i> Организатор: ${organizerName}${ratingHTML}</div>
+                    </div>
                     <div class="d-flex justify-content-between">
                         <a href="event-details.html?id=${event.id}" class="btn btn-outline-primary">Подробнее</a>
-                        <button class="btn btn-primary participate-btn" data-event-id="${event.id}">Участвовать</button>
+                        ${actionButton}
                     </div>
                 </div>
             </div>
@@ -449,7 +540,7 @@
     `;
         }
 
-        // Функция для загрузки событий пользователя
+        // Функция для загрузки событий пользователя (участник + организатор)
         async function loadUserEvents() {
             const token = localStorage.getItem('authToken');
             if (!token) return;
@@ -458,68 +549,127 @@
                 const user = await loadUserProfile();
                 if (!user) return;
 
-                const response = await fetch(`/api/events?organizer_id=${user.id}`);
-                if (!response.ok) throw new Error('Ошибка загрузки событий пользователя');
+                // Загружаем параллельно два списка
+                const [participatingRes, organizingRes] = await Promise.all([
+                    fetch('/api/events/participating', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }),
+                    fetch('/api/events/organizing', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    })
+                ]);
 
-                const events = await response.json();
-                renderUserEvents(events);
+                if (!participatingRes.ok || !organizingRes.ok) {
+                    throw new Error('Ошибка загрузки событий пользователя');
+                }
+
+                const participating = await participatingRes.json();
+                const organizing = await organizingRes.json();
+
+                // Объединяем, убираем возможные дубликаты (если пользователь и участник, и организатор)
+                const allEvents = [...participating, ...organizing];
+                const uniqueEvents = Array.from(
+                    new Map(allEvents.map(e => [e.id, e])).values()
+                );
+
+                // Сортируем по дате (ближайшие сначала)
+                uniqueEvents.sort((a, b) => {
+                    const dateA = new Date(`${a.event_date}T${a.event_time}`);
+                    const dateB = new Date(`${b.event_date}T${b.event_time}`);
+                    return dateA - dateB;
+                });
+
+                // Фильтруем только будущие события (не завершённые)
+                renderUserEvents(uniqueEvents.slice(0, 3));
             } catch (error) {
                 console.error('Ошибка загрузки событий пользователя:', error);
+                // В случае ошибки показываем пустой список
+                renderUserEvents([]);
             }
         }
 
-        // Функция для отрисовки событий пользователя
         function renderUserEvents(events) {
             const container = document.getElementById('userEventsList');
             container.innerHTML = '';
 
-            if (events.length === 0) {
+            // Фильтруем только будущие события (не начавшиеся)
+            const now = new Date();
+            const futureEvents = events.filter(event => {
+                try {
+                    const [year, month, day] = event.event_date.split('T')[0].split('-').map(Number);
+                    const [hours, minutes] = event.event_time.split(':').map(Number);
+                    const eventDate = new Date(year, month - 1, day, hours, minutes);
+                    return !isNaN(eventDate) && eventDate > now;
+                } catch {
+                    return false;
+                }
+            });
+
+            if (futureEvents.length === 0) {
                 container.innerHTML = `
-                    <li class="list-group-item text-center">
-                        У вас пока нет событий
-                    </li>
-                `;
+            <li class="list-group-item text-center">
+                У вас пока нет предстоящих событий
+            </li>
+        `;
                 return;
             }
 
-            events.slice(0, 3).forEach(event => {
-                const eventDate = new Date(`${event.event_date}T${event.event_time}`);
-                const now = new Date();
-                const diffTime = eventDate - now;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            futureEvents.forEach(event => {
+                const [year, month, day] = event.event_date.split('T')[0].split('-').map(Number);
+                const [hours, minutes] = event.event_time.split(':').map(Number);
+                const eventDate = new Date(year, month - 1, day, hours, minutes);
 
-                let badgeText, badgeClass;
-                if (diffDays < 0) {
-                    badgeText = 'Завершено';
+                if (isNaN(eventDate.getTime())) {
+                    console.warn('Некорректная дата для события', event.id);
+                    return;
+                }
+
+                const dateStr = eventDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+                const timeStr = eventDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                const fullDateTime = `${dateStr}, ${timeStr}`;
+
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+
+                let badgeClass, badgeText = '';
+                if (event.status === 'cancelled') {
                     badgeClass = 'bg-secondary';
-                } else if (diffDays === 0) {
-                    badgeText = 'Сегодня';
+                    badgeText = 'Отменено';
+                } else if (eventDate < now) {
+                    badgeClass = 'bg-secondary';
+                    badgeText = 'Завершено';
+                } else if (eventDay.getTime() === today.getTime()) {
                     badgeClass = 'bg-success';
-                } else if (diffDays === 1) {
-                    badgeText = 'Завтра';
+                    badgeText = 'Сегодня';
+                } else if (eventDay.getTime() === tomorrow.getTime()) {
                     badgeClass = 'bg-primary';
-                } else if (diffDays <= 7) {
-                    badgeText = `Через ${diffDays} дн.`;
-                    badgeClass = 'bg-info';
+                    badgeText = 'Завтра';
                 } else {
-                    badgeText = eventDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                    badgeClass = 'bg-light text-dark';
+                    badgeClass = 'bg-info';
+                    badgeText = 'Скоро';
                 }
 
                 container.innerHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        ${event.title}
-                        <span class="badge ${badgeClass}">${badgeText}</span>
-                    </li>
-                `;
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>${event.title}</strong>
+                        <div class="small text-muted">${fullDateTime}</div>
+                    </div>
+                    <span class="badge ${badgeClass}">${badgeText}</span>
+                </div>
+            </li>
+        `;
             });
 
-            if (events.length > 3) {
+            if (futureEvents.length > 3) {
                 container.innerHTML += `
-                    <li class="list-group-item text-center">
-                        <a href="my_events.html">Показать все (${events.length})</a>
-                    </li>
-                `;
+            <li class="list-group-item text-center">
+                <a href="my_events.html">Показать все (${futureEvents.length})</a>
+            </li>
+        `;
             }
         }
 
@@ -550,29 +700,105 @@
             });
         }
 
-        // Обработчик загрузки страницы
+        function initTypesFilters() {
+            const types = [
+                { id: 'training', name: 'Тренировка' },
+                { id: 'competition', name: 'Соревнование' },
+                { id: 'tournament', name: 'Турнир' },
+                { id: 'marathon', name: 'Марафон' },
+                { id: 'workshop', name: 'Мастер-класс' },
+                { id: 'friendly', name: 'Товарищеская встреча' }
+            ];
+            const container = document.getElementById('typesFilterContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            types.forEach(type => {
+                container.innerHTML += `
+            <div class="form-check">
+                <input class="form-check-input type-filter" type="checkbox" id="type_${type.id}" value="${type.id}">
+                <label class="form-check-label" for="type_${type.id}">${type.name}</label>
+            </div>
+        `;
+            });
+        }
+
+        // Загрузка непрочитанных уведомлений
+        async function loadNotifications() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                const resp = await fetch('/api/notifications?unread_only=true', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!resp.ok) return;
+                const notifications = await resp.json();
+                const countEl = document.getElementById('notificationsCount');
+                const listEl = document.getElementById('notificationsList');
+
+                if (notifications.length > 0) {
+                    countEl.classList.remove('d-none');
+                    countEl.textContent = notifications.length;
+                } else {
+                    countEl.classList.add('d-none');
+                }
+
+                listEl.innerHTML = notifications.length === 0
+                    ? '<div class="dropdown-item-text text-muted px-3 py-2">Нет новых уведомлений</div>'
+                    : notifications.map(n => `
+        <a class="dropdown-item d-flex justify-content-between align-items-center notification-item px-3 py-2"
+           href="#" data-id="${n.id}" data-event-id="${n.event_id}"
+           onclick="markAsRead(${n.id}, ${n.event_id})">
+            <div class="small me-3">${n.message}</div>
+            <i class="bi bi-circle-fill text-primary small flex-shrink-0"></i>
+        </a>
+    `).join('');
+            } catch (error) {
+                console.error('Ошибка загрузки уведомлений:', error);
+            }
+        }
+
+        // Отметить уведомление прочитанным и перейти к событию
+        async function markAsRead(notificationId, eventId) {
+            const token = localStorage.getItem('authToken');
+            try {
+                await fetch(`/api/notifications/${notificationId}/read`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (e) { /* игнорируем ошибку */ }
+            window.location.href = `event-details.html?id=${eventId}`;
+        }
+
+        // Автообновление каждые 30 секунд
+        setInterval(loadNotifications, 10000);
+
         document.addEventListener('DOMContentLoaded', async function () {
             // Инициализация фильтров
             initFilters();
+            initTypesFilters();
 
             // Загрузка данных пользователя
             await loadUserProfile();
+            loadNotifications();
 
-            // Загрузка событий пользователя
+            // Загрузка событий пользователя (блок "Ваши события")
             await loadUserEvents();
 
-            // Загрузка всех событий
+            // Загрузка всех событий (теперь loadEvents без параметров)
             await loadEvents();
 
             // Обработчики фильтров
-            document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
-            document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
-            document.getElementById('searchBtn').addEventListener('click', applyFilters);
+            document.getElementById('resetFiltersBtn').addEventListener('click', resetFiltersClient);
+            document.getElementById('searchBtn').addEventListener('click', applyFiltersClient);
             document.getElementById('searchInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') applyFilters();
+                if (e.key === 'Enter') applyFiltersClient();
             });
+            document.getElementById('sortSelect').addEventListener('change', applyFiltersClient);
+            document.getElementById('dateFilter').addEventListener('change', applyFiltersClient);
+            document.querySelector('#sportsFilterContainer')?.addEventListener('change', applyFiltersClient);
+            document.querySelector('#typesFilterContainer')?.addEventListener('change', applyFiltersClient);
 
-            // Обработчик выхода - исправленная версия
+            // Обработчик выхода
             const logoutLink = document.getElementById('logoutLink');
             if (logoutLink) {
                 logoutLink.addEventListener('click', function (e) {
@@ -581,29 +807,25 @@
                 });
             }
 
-            // Обработчик кнопок "Участвовать"
+            // Обработчик клика по кнопке "Участвовать"
             document.addEventListener('click', async function (e) {
                 if (e.target.classList.contains('participate-btn')) {
                     const eventId = e.target.dataset.eventId;
                     const token = localStorage.getItem('authToken');
-
                     if (!token) {
                         alert('Для участия необходимо войти в систему');
                         return;
                     }
-
                     try {
                         const response = await fetch(`/api/events/${eventId}/participate`, {
                             method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
+                            headers: { 'Authorization': `Bearer ${token}` }
                         });
-
                         if (response.ok) {
                             alert('Вы успешно зарегистрировались на событие!');
-                            // Перезагружаем события
-                            loadEvents();
+                            participatingIdsSet.add(parseInt(eventId));
+                            applyFiltersClient();
+                            await loadUserEvents();
                         } else {
                             const error = await response.json();
                             throw new Error(error.error || 'Ошибка регистрации');
@@ -615,38 +837,65 @@
             });
         });
 
-        // Применение фильтров
-        function applyFilters() {
-            const filters = {};
+        function applyFiltersClient() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
+            const dateValue = document.getElementById('dateFilter').value;
+            const selectedSports = Array.from(document.querySelectorAll('.sport-filter:checked')).map(cb => cb.value);
+            const selectedTypes = Array.from(document.querySelectorAll('.type-filter:checked')).map(cb => cb.value);
+            const sortBy = document.getElementById('sortSelect').value;
 
-            // Фильтр по дате
-            filters.date = document.getElementById('dateFilter').value;
+            let filtered = [...allEventsRaw];
 
-            // Фильтр по виду спорта
-            const selectedSports = Array.from(document.querySelectorAll('.sport-filter:checked'))
-                .map(checkbox => checkbox.value);
-
-            if (selectedSports.length > 0) {
-                filters.sportType = selectedSports.join(',');
+            // Поиск
+            if (searchText) {
+                filtered = filtered.filter(ev => ev.title.toLowerCase().includes(searchText));
             }
 
-            // Поисковый запрос
-            const searchQuery = document.getElementById('searchInput').value.trim();
-            if (searchQuery) {
-                filters.search = searchQuery;
+            // Дата
+            if (dateValue !== 'all') {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+                const weekLater = new Date(today); weekLater.setDate(today.getDate() + 7);
+                const monthLater = new Date(today); monthLater.setDate(today.getDate() + 30);
+                filtered = filtered.filter(ev => {
+                    const evDate = createEventDate(ev);
+                    if (!evDate) return false;
+                    const dateOnly = new Date(evDate.getFullYear(), evDate.getMonth(), evDate.getDate());
+                    if (dateValue === 'today') return dateOnly.getTime() === today.getTime();
+                    if (dateValue === 'tomorrow') return dateOnly.getTime() === tomorrow.getTime();
+                    if (dateValue === 'week') return dateOnly >= today && dateOnly <= weekLater;
+                    if (dateValue === 'month') return dateOnly >= today && dateOnly <= monthLater;
+                    return false;
+                });
             }
 
-            loadEvents(filters);
+            // Вид спорта
+            if (selectedSports.length) {
+                filtered = filtered.filter(ev => selectedSports.includes(ev.sport_type));
+            }
+
+            // Тип мероприятия
+            if (selectedTypes.length) {
+                filtered = filtered.filter(ev => selectedTypes.includes(ev.event_type));
+            }
+
+            // Сортировка
+            if (sortBy === 'date_asc') filtered.sort((a, b) => createEventDate(a) - createEventDate(b));
+            else if (sortBy === 'date_desc') filtered.sort((a, b) => createEventDate(b) - createEventDate(a));
+            else if (sortBy === 'popular') filtered.sort((a, b) => (b.participant_count || 0) - (a.participant_count || 0));
+            else if (sortBy === 'price_asc') filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+
+            document.getElementById('eventsCountInfo').innerHTML = `Найдено: ${filtered.length}`;
+            renderEvents(filtered, organizerRatingsCache);
         }
 
-        // Сброс фильтров
-        function resetFilters() {
+        function resetFiltersClient() {
             document.getElementById('dateFilter').value = 'all';
-            document.querySelectorAll('.sport-filter').forEach(checkbox => {
-                checkbox.checked = false;
-            });
+            document.querySelectorAll('.sport-filter').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.type-filter').forEach(cb => cb.checked = false);
             document.getElementById('searchInput').value = '';
-            loadEvents();
+            document.getElementById('sortSelect').value = 'date_asc';
+            applyFiltersClient();
         }
     </script>
 </body>

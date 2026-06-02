@@ -10,20 +10,20 @@
     <script>
         // Система защиты авторизации
         (function () {
-            // Разрешенные страницы без авторизации
-            const allowedPages = ['aut.html', 'reg.html'];
+            // Разрешенные страницы без авторизации (теперь с welcome.html)
+            const allowedPages = ['welcome.html', 'aut.html', 'reg.html'];
             const currentPage = window.location.pathname.split('/').pop() || 'index.html';
 
             const token = localStorage.getItem('authToken');
             const isLoggedIn = !!token;
 
-            // Если пользователь не авторизован и пытается получить доступ к защищенной странице
+            // Если не авторизован и пытается попасть на защищённую страницу -> на приветственную
             if (!isLoggedIn && !allowedPages.includes(currentPage)) {
                 sessionStorage.setItem('redirectUrl', window.location.href);
-                window.location.href = 'aut.html';
+                window.location.href = 'welcome.html';
             }
 
-            // Если пользователь авторизован и пытается получить доступ к странице входа/регистрации
+            // Если авторизован и пытается зайти на страницы входа/регистрации/приветствия -> на главную
             if (isLoggedIn && allowedPages.includes(currentPage)) {
                 window.location.href = 'index.html';
             }
@@ -155,6 +155,24 @@
                     </li>
                 </ul>
                 <div class="d-flex align-items-center">
+                    <!-- Уведомления (слева) -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-light position-relative" type="button" data-bs-toggle="dropdown"
+                            id="notificationsDropdown">
+                            <i class="bi bi-bell fs-5"></i>
+                            <span id="notificationsCount"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end"
+                            style="width: 380px; max-height: 400px; overflow-y: auto; overflow-x: hidden; padding: 0;"
+                            id="notificationsMenu">
+                            <h6 class="dropdown-header px-3 pt-2">Уведомления</h6>
+                            <div id="notificationsList"
+                                style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; padding: 0 8px 8px;">
+                                <div class="dropdown-item-text text-muted px-3 py-2">Загрузка...</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
                             data-bs-toggle="dropdown">
@@ -209,7 +227,7 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="past-tab" data-bs-toggle="tab" data-bs-target="#past" type="button"
                     role="tab">
-                    <i class="bi bi-clock-history me-1"></i> Прошедшие
+                    <i class="bi bi-clock-history me-1"></i> Завершённые/Отменённые
                 </button>
             </li>
         </ul>
@@ -221,51 +239,34 @@
                     <div class="col-lg-3 mb-4">
                         <div class="card shadow-sm">
                             <div class="card-body">
-                                <!-- Кнопка "На главную" в боковом меню -->
                                 <a href="index.html" class="btn btn-outline-primary mb-3 w-100">
                                     <i class="bi bi-house-door me-1"></i> На главную
                                 </a>
-
                                 <ul class="nav nav-pills flex-column">
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="profile.html"><i class="bi bi-person me-2"></i> Обзор
-                                            профиля</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link active" href="my_events.html"><i
-                                                class="bi bi-calendar-event me-2"></i> Мои
-                                            мероприятия</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="settings.html"><i class="bi bi-gear me-2"></i>
-                                            Настройки</a>
-                                    </li>
-                                    <li class="nav-item mt-3">
-                                        <a class="nav-link text-danger" href="aut.html"><i
-                                                class="bi bi-box-arrow-right me-2"></i>
-                                            Выйти</a>
-                                    </li>
+                                    <li class="nav-item"><a class="nav-link" href="profile.html"><i
+                                                class="bi bi-person me-2"></i> Обзор профиля</a></li>
+                                    <li class="nav-item"><a class="nav-link active" href="my_events.html"><i
+                                                class="bi bi-calendar-event me-2"></i> Мои мероприятия</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="settings.html"><i
+                                                class="bi bi-gear me-2"></i> Настройки</a></li>
+                                    <li class="nav-item mt-3"><a class="nav-link text-danger" href="aut.html"><i
+                                                class="bi bi-box-arrow-right me-2"></i> Выйти</a></li>
                                 </ul>
                             </div>
                         </div>
                         <div class="card filter-card">
-                            <div class="card-header bg-primary text-white">
-                                Фильтры мероприятий
-                            </div>
+                            <div class="card-header bg-primary text-white">Фильтры мероприятий</div>
                             <div class="card-body">
+                                <!-- Поиск -->
                                 <div class="mb-3">
-                                    <label class="form-label">Статус</label>
-                                    <select class="form-select" id="statusFilter">
-                                        <option value="all">Все</option>
-                                        <option value="active" selected>Активные</option>
-                                        <option value="completed">Завершённые</option>
-                                        <option value="cancelled">Отменённые</option>
-                                    </select>
+                                    <label class="form-label">Поиск</label>
+                                    <input type="text" class="form-control" id="participatingSearchInput"
+                                        placeholder="Название события">
                                 </div>
-
+                                <!-- Дата -->
                                 <div class="mb-3">
                                     <label class="form-label">Дата</label>
-                                    <select class="form-select" id="dateFilter">
+                                    <select class="form-select" id="participatingDateFilter">
                                         <option value="all">Любая</option>
                                         <option value="today">Сегодня</option>
                                         <option value="tomorrow">Завтра</option>
@@ -273,36 +274,56 @@
                                         <option value="month">В этом месяце</option>
                                     </select>
                                 </div>
-
+                                <!-- Вид спорта (кнопка-раскрывалка) -->
                                 <div class="mb-3">
-                                    <label class="form-label">Вид спорта</label>
-                                    <div class="form-check">
-                                        <input class="form-check-input sport-filter" type="checkbox" value="running"
-                                            id="running-filter" checked>
-                                        <label class="form-check-label" for="running-filter">
-                                            🏃 Бег
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input sport-filter" type="checkbox" value="cycling"
-                                            id="cycling-filter" checked>
-                                        <label class="form-check-label" for="cycling-filter">
-                                            🚴 Велоспорт
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input sport-filter" type="checkbox" value="football"
-                                            id="football-filter">
-                                        <label class="form-check-label" for="football-filter">
-                                            ⚽ Футбол
-                                        </label>
+                                    <button class="btn btn-link p-0 text-start sports-filter-btn" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#participatingSportsCollapse"
+                                        aria-expanded="false" aria-controls="participatingSportsCollapse">
+                                        Вид спорта
+                                        <span>
+                                            <i class="bi bi-chevron-down"></i>
+                                            <i class="bi bi-chevron-up"></i>
+                                        </span>
+                                    </button>
+                                    <div class="collapse" id="participatingSportsCollapse">
+                                        <div class="mt-2" id="participatingSportsContainer">
+                                            <!-- Чекбоксы будут добавлены динамически -->
+                                        </div>
                                     </div>
                                 </div>
-
-                                <button class="btn btn-primary w-100" id="applyFilters">Применить фильтры</button>
+                                <!-- Тип мероприятия (кнопка-раскрывалка) -->
+                                <div class="mb-3">
+                                    <button class="btn btn-link p-0 text-start sports-filter-btn" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#participatingTypesCollapse"
+                                        aria-expanded="false" aria-controls="participatingTypesCollapse">
+                                        Тип мероприятия
+                                        <span>
+                                            <i class="bi bi-chevron-down"></i>
+                                            <i class="bi bi-chevron-up"></i>
+                                        </span>
+                                    </button>
+                                    <div class="collapse" id="participatingTypesCollapse">
+                                        <div class="mt-2" id="participatingTypesContainer">
+                                            <!-- Чекбоксы будут добавлены динамически -->
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Сортировка -->
+                                <div class="mb-3">
+                                    <label class="form-label">Сортировка</label>
+                                    <select class="form-select" id="participatingSort">
+                                        <option value="date_asc">По дате (сначала ближайшие)</option>
+                                        <option value="date_desc">По дате (сначала дальние)</option>
+                                        <option value="popular">По популярности (больше участников)</option>
+                                        <option value="price_asc">Сначала бесплатные</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-outline-secondary w-100" id="participatingResetBtn">Сбросить
+                                    фильтры</button>
+                                <div class="mt-2 text-muted small text-center" id="participatingCountInfo"></div>
                             </div>
                         </div>
-                    </div>
+                    </div> <!-- закрываем col-lg-3 -->
 
                     <!-- Список мероприятий -->
                     <div class="col-lg-9">
@@ -320,52 +341,32 @@
             <!-- Вкладка "Организую" -->
             <div class="tab-pane fade" id="organizing" role="tabpanel">
                 <div class="row">
-                    <!-- Фильтры -->
                     <div class="col-lg-3 mb-4">
                         <div class="card shadow-sm">
                             <div class="card-body">
-                                <!-- Кнопка "На главную" в боковом меню -->
                                 <a href="index.html" class="btn btn-outline-primary mb-3 w-100">
                                     <i class="bi bi-house-door me-1"></i> На главную
                                 </a>
-
                                 <ul class="nav nav-pills flex-column">
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="profile.html"><i class="bi bi-person me-2"></i> Обзор
-                                            профиля</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link active" href="my_events.html"><i
-                                                class="bi bi-calendar-event me-2"></i> Мои
-                                            мероприятия</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="settings.html"><i class="bi bi-gear me-2"></i>
-                                            Настройки</a>
-                                    </li>
-                                    <li class="nav-item mt-3">
-                                        <a class="nav-link text-danger" href="aut.html"><i
-                                                class="bi bi-box-arrow-right me-2"></i>
-                                            Выйти</a>
-                                    </li>
+                                    <li class="nav-item"><a class="nav-link" href="profile.html"><i
+                                                class="bi bi-person me-2"></i> Обзор профиля</a></li>
+                                    <li class="nav-item"><a class="nav-link active" href="my_events.html"><i
+                                                class="bi bi-calendar-event me-2"></i> Мои мероприятия</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="settings.html"><i
+                                                class="bi bi-gear me-2"></i> Настройки</a></li>
+                                    <li class="nav-item mt-3"><a class="nav-link text-danger" href="aut.html"><i
+                                                class="bi bi-box-arrow-right me-2"></i> Выйти</a></li>
                                 </ul>
                             </div>
                         </div>
                         <div class="card filter-card">
-                            <div class="card-header bg-info text-white">
-                                Фильтры мероприятий
-                            </div>
+                            <div class="card-header bg-info text-white">Фильтры мероприятий</div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label class="form-label">Статус</label>
-                                    <select class="form-select" id="organizingStatusFilter">
-                                        <option value="all">Все</option>
-                                        <option value="active" selected>Активные</option>
-                                        <option value="completed">Завершённые</option>
-                                        <option value="cancelled">Отменённые</option>
-                                    </select>
+                                    <label class="form-label">Поиск</label>
+                                    <input type="text" class="form-control" id="organizingSearchInput"
+                                        placeholder="Название события">
                                 </div>
-
                                 <div class="mb-3">
                                     <label class="form-label">Дата</label>
                                     <select class="form-select" id="organizingDateFilter">
@@ -376,32 +377,50 @@
                                         <option value="month">В этом месяце</option>
                                     </select>
                                 </div>
-
                                 <div class="mb-3">
-                                    <label class="form-label">Тип мероприятия</label>
-                                    <div class="form-check">
-                                        <input class="form-check-input type-filter" type="checkbox" value="training"
-                                            id="training-filter" checked>
-                                        <label class="form-check-label" for="training-filter">
-                                            Тренировки
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input type-filter" type="checkbox" value="competition"
-                                            id="competition-filter">
-                                        <label class="form-check-label" for="competition-filter">
-                                            Соревнования
-                                        </label>
+                                    <button class="btn btn-link p-0 text-start sports-filter-btn" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#organizingSportsCollapse"
+                                        aria-expanded="false" aria-controls="organizingSportsCollapse">
+                                        Вид спорта
+                                        <span>
+                                            <i class="bi bi-chevron-down"></i>
+                                            <i class="bi bi-chevron-up"></i>
+                                        </span>
+                                    </button>
+                                    <div class="collapse" id="organizingSportsCollapse">
+                                        <div class="mt-2" id="organizingSportsContainer"></div>
                                     </div>
                                 </div>
-
-                                <button class="btn btn-info w-100 text-white" id="applyOrganizingFilters">Применить
+                                <div class="mb-3">
+                                    <button class="btn btn-link p-0 text-start sports-filter-btn" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#organizingTypesCollapse"
+                                        aria-expanded="false" aria-controls="organizingTypesCollapse">
+                                        Тип мероприятия
+                                        <span>
+                                            <i class="bi bi-chevron-down"></i>
+                                            <i class="bi bi-chevron-up"></i>
+                                        </span>
+                                    </button>
+                                    <div class="collapse" id="organizingTypesCollapse">
+                                        <div class="mt-2" id="organizingTypesContainer"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Сортировка</label>
+                                    <select class="form-select" id="organizingSort">
+                                        <option value="date_asc">По дате (сначала ближайшие)</option>
+                                        <option value="date_desc">По дате (сначала дальние)</option>
+                                        <option value="popular">По популярности (больше участников)</option>
+                                        <option value="price_asc">Сначала бесплатные</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-outline-secondary w-100" id="organizingResetBtn">Сбросить
                                     фильтры</button>
+                                <div class="mt-2 text-muted small text-center" id="organizingCountInfo"></div>
                             </div>
                         </div>
-                    </div>
+                    </div> <!-- закрываем col-lg-3 -->
 
-                    <!-- Список мероприятий -->
                     <div class="col-lg-9">
                         <div id="organizingEventsContainer" class="row row-cols-1 row-cols-md-2 g-4">
                             <div class="loading-spinner">
@@ -417,42 +436,32 @@
             <!-- Вкладка "Прошедшие" -->
             <div class="tab-pane fade" id="past" role="tabpanel">
                 <div class="row">
-                    <!-- Фильтры -->
                     <div class="col-lg-3 mb-4">
                         <div class="card shadow-sm">
                             <div class="card-body">
-                                <!-- Кнопка "На главную" в боковом меню -->
                                 <a href="index.html" class="btn btn-outline-primary mb-3 w-100">
                                     <i class="bi bi-house-door me-1"></i> На главную
                                 </a>
-
                                 <ul class="nav nav-pills flex-column">
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="profile.html"><i class="bi bi-person me-2"></i> Обзор
-                                            профиля</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link active" href="my_events.html"><i
-                                                class="bi bi-calendar-event me-2"></i> Мои
-                                            мероприятия</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="settings.html"><i class="bi bi-gear me-2"></i>
-                                            Настройки</a>
-                                    </li>
-                                    <li class="nav-item mt-3">
-                                        <a class="nav-link text-danger" href="aut.html"><i
-                                                class="bi bi-box-arrow-right me-2"></i>
-                                            Выйти</a>
-                                    </li>
+                                    <li class="nav-item"><a class="nav-link" href="profile.html"><i
+                                                class="bi bi-person me-2"></i> Обзор профиля</a></li>
+                                    <li class="nav-item"><a class="nav-link active" href="my_events.html"><i
+                                                class="bi bi-calendar-event me-2"></i> Мои мероприятия</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="settings.html"><i
+                                                class="bi bi-gear me-2"></i> Настройки</a></li>
+                                    <li class="nav-item mt-3"><a class="nav-link text-danger" href="aut.html"><i
+                                                class="bi bi-box-arrow-right me-2"></i> Выйти</a></li>
                                 </ul>
                             </div>
                         </div>
                         <div class="card filter-card">
-                            <div class="card-header bg-secondary text-white">
-                                Фильтры мероприятий
-                            </div>
+                            <div class="card-header bg-secondary text-white">Фильтры мероприятий</div>
                             <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Поиск</label>
+                                    <input type="text" class="form-control" id="pastSearchInput"
+                                        placeholder="Название события">
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label">Период</label>
                                     <select class="form-select" id="periodFilter">
@@ -462,7 +471,6 @@
                                         <option value="year">За последний год</option>
                                     </select>
                                 </div>
-
                                 <div class="mb-3">
                                     <label class="form-label">Роль</label>
                                     <select class="form-select" id="roleFilter">
@@ -471,38 +479,49 @@
                                         <option value="organizer">Организатор</option>
                                     </select>
                                 </div>
-
                                 <div class="mb-3">
-                                    <label class="form-label">Вид спорта</label>
-                                    <div class="form-check">
-                                        <input class="form-check-input past-sport-filter" type="checkbox"
-                                            value="running" id="past-running-filter" checked>
-                                        <label class="form-check-label" for="past-running-filter">
-                                            🏃 Бег
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input past-sport-filter" type="checkbox"
-                                            value="cycling" id="past-cycling-filter" checked>
-                                        <label class="form-check-label" for="past-cycling-filter">
-                                            🚴 Велоспорт
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input past-sport-filter" type="checkbox"
-                                            value="football" id="past-football-filter">
-                                        <label class="form-check-label" for="past-football-filter">
-                                            ⚽ Футбол
-                                        </label>
+                                    <button class="btn btn-link p-0 text-start sports-filter-btn" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#pastSportsCollapse"
+                                        aria-expanded="false" aria-controls="pastSportsCollapse">
+                                        Вид спорта
+                                        <span>
+                                            <i class="bi bi-chevron-down"></i>
+                                            <i class="bi bi-chevron-up"></i>
+                                        </span>
+                                    </button>
+                                    <div class="collapse" id="pastSportsCollapse">
+                                        <div class="mt-2" id="pastSportsContainer"></div>
                                     </div>
                                 </div>
-
-                                <button class="btn btn-secondary w-100" id="applyPastFilters">Применить фильтры</button>
+                                <div class="mb-3">
+                                    <button class="btn btn-link p-0 text-start sports-filter-btn" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#pastTypesCollapse"
+                                        aria-expanded="false" aria-controls="pastTypesCollapse">
+                                        Тип мероприятия
+                                        <span>
+                                            <i class="bi bi-chevron-down"></i>
+                                            <i class="bi bi-chevron-up"></i>
+                                        </span>
+                                    </button>
+                                    <div class="collapse" id="pastTypesCollapse">
+                                        <div class="mt-2" id="pastTypesContainer"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Сортировка</label>
+                                    <select class="form-select" id="pastSort">
+                                        <option value="date_desc">Сначала новые</option>
+                                        <option value="date_asc">Сначала старые</option>
+                                        <option value="popular">По популярности</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-outline-secondary w-100" id="pastResetBtn">Сбросить
+                                    фильтры</button>
+                                <div class="mt-2 text-muted small text-center" id="pastCountInfo"></div>
                             </div>
                         </div>
-                    </div>
+                    </div> <!-- закрываем col-lg-3 -->
 
-                    <!-- Список мероприятий -->
                     <div class="col-lg-9">
                         <div id="pastEventsContainer" class="row row-cols-1 row-cols-md-2 g-4">
                             <div class="loading-spinner">
@@ -547,645 +566,597 @@
         </div>
     </footer>
 
+    <!-- Модальное окно отмены события -->
+    <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cancelModalLabel">Отмена мероприятия</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Укажите причину отмены:</p>
+                    <select class="form-select mb-3" id="cancelReasonSelect">
+                        <option value="" selected disabled>Выберите причину...</option>
+                        <option value="Плохая погода">Плохая погода</option>
+                        <option value="Недостаток участников">Недостаток участников</option>
+                        <option value="Личные обстоятельства">Личные обстоятельства</option>
+                        <option value="Другое">Другое</option>
+                    </select>
+                    <input type="text" class="form-control d-none" id="cancelReasonCustom"
+                        placeholder="Введите свою причину">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    <button type="button" class="btn btn-danger" id="confirmCancelBtn">Отменить мероприятие</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Функция для тестирования endpoint'ов
-        async function testEndpoint(endpoint) {
-            try {
-                console.log(`🔄 Тестируем endpoint: ${endpoint}`);
-                const result = await fetchEvents(endpoint);
-                console.log(`✅ ${endpoint}:`, result);
-                alert(`✅ ${endpoint} работает!\nДанные: ${JSON.stringify(result).substring(0, 200)}...`);
-            } catch (error) {
-                console.error(`❌ ${endpoint}:`, error);
-                alert(`❌ ${endpoint} ошибка: ${error.message}`);
+        const sportNames = {
+            running: 'Бег', cycling: 'Велоспорт', football: 'Футбол',
+            basketball: 'Баскетбол', tennis: 'Теннис', volleyball: 'Волейбол',
+            swimming: 'Плавание', yoga: 'Йога'
+        };
+
+        // Инициализация чекбоксов для вкладки "Участвую"
+        function initParticipatingFilters() {
+            const sports = [
+                { id: 'running', name: '🏃 Бег' }, { id: 'cycling', name: '🚴 Велоспорт' },
+                { id: 'football', name: '⚽ Футбол' }, { id: 'basketball', name: '🏀 Баскетбол' },
+                { id: 'tennis', name: '🎾 Теннис' }, { id: 'volleyball', name: '🏐 Волейбол' },
+                { id: 'swimming', name: '🏊 Плавание' }, { id: 'yoga', name: '🧘 Йога' }
+            ];
+            const sportsContainer = document.getElementById('participatingSportsContainer');
+            if (sportsContainer) {
+                sportsContainer.innerHTML = '';
+                sports.forEach(sport => {
+                    sportsContainer.innerHTML += `
+                <div class="form-check">
+                    <input class="form-check-input participating-sport-filter" type="checkbox" value="${sport.id}" id="p_sport_${sport.id}">
+                    <label class="form-check-label" for="p_sport_${sport.id}">${sport.name}</label>
+                </div>
+            `;
+                });
+                sportsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyParticipatingFilters));
             }
-        }
-        // Функции для диагностики
-        async function testDB() {
-            try {
-                const result = await fetchEvents('/api/debug/db-test');
-                alert('База данных доступна: ' + JSON.stringify(result));
-            } catch (error) {
-                alert('Ошибка БД: ' + error.message);
+            const types = [
+                { id: 'training', name: 'Тренировка' }, { id: 'competition', name: 'Соревнование' },
+                { id: 'tournament', name: 'Турнир' }, { id: 'marathon', name: 'Марафон' },
+                { id: 'workshop', name: 'Мастер-класс' }, { id: 'friendly', name: 'Товарищеская встреча' }
+            ];
+            const typesContainer = document.getElementById('participatingTypesContainer');
+            if (typesContainer) {
+                typesContainer.innerHTML = '';
+                types.forEach(type => {
+                    typesContainer.innerHTML += `
+                <div class="form-check">
+                    <input class="form-check-input participating-type-filter" type="checkbox" value="${type.id}" id="p_type_${type.id}">
+                    <label class="form-check-label" for="p_type_${type.id}">${type.name}</label>
+                </div>
+            `;
+                });
+                typesContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyParticipatingFilters));
             }
         }
 
-        async function testUserEvents() {
-            try {
-                const user = await fetchUserData();
-                const result = await fetchEvents(`/api/debug/user-events/${user.id}`);
-                alert(`События пользователя: ${result.organizingCount} организатор, ${result.participatingCount} участник`);
-            } catch (error) {
-                alert('Ошибка: ' + error.message);
+        // Аналогично для "Организую"
+        function initOrganizingFilters() {
+            const sports = [
+                { id: 'running', name: '🏃 Бег' }, { id: 'cycling', name: '🚴 Велоспорт' },
+                { id: 'football', name: '⚽ Футбол' }, { id: 'basketball', name: '🏀 Баскетбол' },
+                { id: 'tennis', name: '🎾 Теннис' }, { id: 'volleyball', name: '🏐 Волейбол' },
+                { id: 'swimming', name: '🏊 Плавание' }, { id: 'yoga', name: '🧘 Йога' }
+            ];
+            const sportsContainer = document.getElementById('organizingSportsContainer');
+            if (sportsContainer) {
+                sportsContainer.innerHTML = '';
+                sports.forEach(sport => {
+                    sportsContainer.innerHTML += `<div class="form-check"><input class="form-check-input organizing-sport-filter" type="checkbox" value="${sport.id}" id="o_sport_${sport.id}"><label for="o_sport_${sport.id}">${sport.name}</label></div>`;
+                });
+                sportsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyOrganizingFilters));
+            }
+            const types = [
+                { id: 'training', name: 'Тренировка' }, { id: 'competition', name: 'Соревнование' },
+                { id: 'tournament', name: 'Турнир' }, { id: 'marathon', name: 'Марафон' },
+                { id: 'workshop', name: 'Мастер-класс' }, { id: 'friendly', name: 'Товарищеская встреча' }
+            ];
+            const typesContainer = document.getElementById('organizingTypesContainer');
+            if (typesContainer) {
+                typesContainer.innerHTML = '';
+                types.forEach(type => {
+                    typesContainer.innerHTML += `<div class="form-check"><input class="form-check-input organizing-type-filter" type="checkbox" value="${type.id}" id="o_type_${type.id}"><label for="o_type_${type.id}">${type.name}</label></div>`;
+                });
+                typesContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyOrganizingFilters));
             }
         }
 
-        async function testTables() {
-            try {
-                const result = await fetchEvents('/api/debug/tables');
-                alert('Таблицы: ' + result.tables.map(t => t.table_name).join(', '));
-            } catch (error) {
-                alert('Ошибка: ' + error.message);
+        // Для "Завершённые/Отменённые"
+        function initPastFilters() {
+            const sports = [
+                { id: 'running', name: '🏃 Бег' }, { id: 'cycling', name: '🚴 Велоспорт' },
+                { id: 'football', name: '⚽ Футбол' }, { id: 'basketball', name: '🏀 Баскетбол' },
+                { id: 'tennis', name: '🎾 Теннис' }, { id: 'volleyball', name: '🏐 Волейбол' },
+                { id: 'swimming', name: '🏊 Плавание' }, { id: 'yoga', name: '🧘 Йога' }
+            ];
+            const sportsContainer = document.getElementById('pastSportsContainer');
+            if (sportsContainer) {
+                sportsContainer.innerHTML = '';
+                sports.forEach(sport => {
+                    sportsContainer.innerHTML += `<div class="form-check"><input class="form-check-input past-sport-filter" type="checkbox" value="${sport.id}" id="past_sport_${sport.id}"><label for="past_sport_${sport.id}">${sport.name}</label></div>`;
+                });
+                sportsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyPastFilters));
+            }
+            const types = [
+                { id: 'training', name: 'Тренировка' }, { id: 'competition', name: 'Соревнование' },
+                { id: 'tournament', name: 'Турнир' }, { id: 'marathon', name: 'Марафон' },
+                { id: 'workshop', name: 'Мастер-класс' }, { id: 'friendly', name: 'Товарищеская встреча' }
+            ];
+            const typesContainer = document.getElementById('pastTypesContainer');
+            if (typesContainer) {
+                typesContainer.innerHTML = '';
+                types.forEach(type => {
+                    typesContainer.innerHTML += `<div class="form-check"><input class="form-check-input past-type-filter" type="checkbox" value="${type.id}" id="past_type_${type.id}"><label for="past_type_${type.id}">${type.name}</label></div>`;
+                });
+                typesContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyPastFilters));
             }
         }
-        // Функция для получения данных пользователя
+
+        let currentUserId = null;
+        let participatingEventsRaw = [];
+        let organizingEventsRaw = [];
+        let pastEventsRaw = [];
+
+        // ----- Уведомления (без изменений) -----
+        async function loadNotifications() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                const resp = await fetch('/api/notifications?unread_only=true', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!resp.ok) return;
+                const notifications = await resp.json();
+                const countEl = document.getElementById('notificationsCount');
+                const listEl = document.getElementById('notificationsList');
+                if (notifications.length > 0) {
+                    countEl.classList.remove('d-none');
+                    countEl.textContent = notifications.length;
+                } else {
+                    countEl.classList.add('d-none');
+                }
+                listEl.innerHTML = notifications.length === 0
+                    ? '<div class="dropdown-item-text text-muted px-3 py-2">Нет новых уведомлений</div>'
+                    : notifications.map(n => `
+                    <a class="dropdown-item d-flex justify-content-between align-items-center notification-item px-3 py-2"
+                       href="#" data-id="${n.id}" data-event-id="${n.event_id}"
+                       onclick="markAsRead(${n.id}, ${n.event_id})">
+                        <div class="small me-3">${n.message}</div>
+                        <i class="bi bi-circle-fill text-primary small flex-shrink-0"></i>
+                    </a>
+                `).join('');
+            } catch (error) { console.error(error); }
+        }
+        async function markAsRead(notificationId, eventId) {
+            const token = localStorage.getItem('authToken');
+            try {
+                await fetch(`/api/notifications/${notificationId}/read`, {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (e) { }
+            window.location.href = `event-details.html?id=${eventId}`;
+        }
+        setInterval(loadNotifications, 10000);
+
+        // ----- Получение данных пользователя -----
         async function fetchUserData() {
             const token = localStorage.getItem('authToken');
             if (!token) return null;
-
             try {
-                const response = await fetch('/api/user', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
+                const response = await fetch('/api/user', { headers: { 'Authorization': `Bearer ${token}` } });
                 if (response.ok) {
-                    return await response.json();
+                    const user = await response.json();
+                    currentUserId = user.id;
+                    return user;
                 }
                 return null;
-            } catch (error) {
-                console.error('Ошибка получения данных пользователя:', error);
-                return null;
-            }
+            } catch (e) { console.error(e); return null; }
         }
 
-        // Улучшенная функция для получения мероприятий с детальной информацией об ошибках
-        async function fetchEvents(endpoint) {
-            const token = localStorage.getItem('authToken');
-            console.log('🔄 Запрос к:', endpoint);
-
-            if (!token) {
-                console.error('❌ Токен не найден');
-                throw new Error('Требуется авторизация');
-            }
-
-            try {
-                const response = await fetch(endpoint, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                console.log('📊 Статус ответа:', response.status);
-
-                const responseText = await response.text();
-                console.log('📄 Текст ответа:', responseText);
-
-                if (!response.ok) {
-                    let errorData;
-                    try {
-                        errorData = JSON.parse(responseText);
-                    } catch (e) {
-                        errorData = { error: responseText || 'Неизвестная ошибка сервера' };
-                    }
-
-                    console.error('❌ Ошибка сервера:', response.status, errorData);
-                    throw new Error(errorData.details || errorData.error || `HTTP ${response.status}`);
-                }
-
-                try {
-                    const data = JSON.parse(responseText);
-                    console.log('✅ Получены данные:', data);
-                    return data;
-                } catch (e) {
-                    console.error('❌ Ошибка парсинга JSON:', e);
-                    throw new Error('Неверный формат ответа сервера');
-                }
-
-            } catch (error) {
-                console.error('❌ Ошибка получения мероприятий:', error);
-                throw error;
-            }
-        }
-
-        // Функция для форматирования даты (УЛУЧШЕННАЯ)
-        function formatDate(dateString) {
-            if (!dateString) return 'Дата не указана';
-
-            try {
-                const date = new Date(dateString);
-                if (isNaN(date.getTime())) return dateString;
-
-                const today = new Date();
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-
-                if (date.toDateString() === today.toDateString()) {
-                    return 'Сегодня';
-                } else if (date.toDateString() === tomorrow.toDateString()) {
-                    return 'Завтра';
-                } else {
-                    const options = { day: 'numeric', month: 'long', year: 'numeric' };
-                    return date.toLocaleDateString('ru-RU', options);
-                }
-            } catch (error) {
-                console.error('Ошибка форматирования даты:', error);
-                return dateString;
-            }
-        }
-
-        // Улучшенная функция для отображения мероприятий
-        function displayEvents(events, containerId, type) {
-            const container = document.getElementById(containerId);
-            if (!container) {
-                console.error('❌ Контейнер не найден:', containerId);
-                return;
-            }
-
-            console.log(`📊 Отображение мероприятий (${type}):`, events);
-
-            if (!Array.isArray(events)) {
-                console.error('❌ Ожидался массив мероприятий, получено:', events);
-                container.innerHTML = `
-      <div class="col-12">
-        <div class="alert alert-danger">
-          Ошибка формата данных: сервер вернул ${typeof events}
-          <br><small>${JSON.stringify(events).substring(0, 200)}</small>
-        </div>
-      </div>
-    `;
-                return;
-            }
-
-            if (events.length === 0) {
-                container.innerHTML = `
-      <div class="col-12">
-        <div class="empty-state">
-          <i class="bi bi-calendar-x"></i>
-          <h4>Нет мероприятий</h4>
-          <p class="text-muted">${type === 'participating'
-                        ? 'Вы не участвуете в мероприятиях'
-                        : type === 'organizing'
-                            ? 'Вы не организуете мероприятия'
-                            : 'Нет прошедших мероприятий'
-                    }.</p>
-          ${type === 'organizing' ? `
-          <a href="create.html" class="btn btn-success mt-3">
-            <i class="bi bi-plus-circle"></i> Создать первое мероприятие
-          </a>
-          ` : ''}
-        </div>
-      </div>
-    `;
-                return;
-            }
-
-            let eventsHTML = '';
-
-            events.forEach(event => {
-                // Безопасное создание даты
-                const eventDate = event.event_date ? new Date(event.event_date + 'T00:00:00') : new Date();
-                const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-
-                const isPast = eventDay < today;
-                const isToday = eventDay.getTime() === today.getTime();
-
-                // Форматируем дату
-                const formattedDate = formatDate(event.event_date);
-
-                // Форматируем время (убираем секунды если есть)
-                const eventTime = event.event_time ?
-                    (typeof event.event_time === 'string' ? event.event_time.substring(0, 5) : '00:00') :
-                    '00:00';
-
-                // Определяем статус события
-                let statusBadge = '';
-                let statusText = '';
-
-                if (event.status === 'cancelled') {
-                    statusBadge = 'bg-secondary';
-                    statusText = 'Отменено';
-                } else if (isPast) {
-                    statusBadge = 'bg-secondary';
-                    statusText = 'Завершено';
-                } else if (isToday) {
-                    statusBadge = 'bg-success';
-                    statusText = 'Сегодня';
-                } else {
-                    statusBadge = 'bg-primary';
-                    statusText = 'Активно';
-                }
-
-                // Определяем бейдж роли
-                const roleBadge = type === 'organizing' ? 'organizer-badge' :
-                    type === 'participating' ? 'participant-badge' :
-                        event.user_role === 'organizer' ? 'organizer-badge' : 'participant-badge';
-
-                const roleText = type === 'organizing' ? 'Организатор' :
-                    type === 'participating' ? 'Участник' :
-                        event.user_role === 'organizer' ? 'Организатор' : 'Участник';
-
-                eventsHTML += `
-      <div class="col">
-        <div class="card h-100 event-card">
-          <span class="status-badge badge ${roleBadge}">
-            ${roleText}
-          </span>
-          <span class="category-badge badge ${event.price > 0 ? 'bg-warning text-dark' : 'bg-success'}">
-            ${event.price > 0 ? event.price + ' ₽' : 'Бесплатно'}
-          </span>
-          
-          <div class="map-preview">
-            <div class="d-flex justify-content-center align-items-center h-100 text-muted">
-              <i class="bi bi-geo-alt-fill me-2"></i>
-              ${event.location || 'Место проведения'}
-            </div>
-          </div>
-          
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <h5 class="card-title">${event.title || 'Без названия'}</h5>
-              <img src="${event.sport_type || 'default'}.svg" class="sport-icon" alt="${event.sport_type || 'Спорт'}">
-            </div>
-            
-            <div class="mb-2">
-              <span class="badge ${statusBadge} me-2">${statusText}</span>
-              <span class="badge bg-light text-dark">
-                <i class="bi bi-tag me-1"></i> 
-                ${getEventTypeText(event.event_type)}
-              </span>
-            </div>
-            
-            <p class="card-text">
-              <i class="bi bi-calendar"></i> <strong>${formattedDate}</strong><br>
-              <i class="bi bi-clock"></i> ${eventTime}<br>
-              <i class="bi bi-geo-alt"></i> ${event.location || 'Место не указано'}<br>
-              <i class="bi bi-people"></i> 
-              Участников: ${event.participants_count || 0} 
-              ${event.max_participants ? `/ ${event.max_participants}` : ''}
-            </p>
-            
-            <div class="d-flex justify-content-between align-items-center mt-3">
-              <small class="text-muted">
-                Организатор: ${event.organizer_name || 'Не указан'}
-              </small>
-              
-              <div>
-                <a href="event-details.html?id=${event.id}" class="btn btn-outline-primary btn-sm me-2">
-                  <i class="bi bi-eye"></i> Просмотр
-                </a>
-                ${type === 'organizing' && !isPast && event.status !== 'cancelled' ? `
-                <button class="btn btn-outline-secondary btn-sm" onclick="editEvent(${event.id})">
-                  <i class="bi bi-pencil"></i> Редактировать
-                </button>
-                ` : ''}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-            });
-
-            container.innerHTML = eventsHTML;
-        }
-
-        // ВРЕМЕННОЕ РАБОЧЕЕ РЕШЕНИЕ: Используем диагностические endpoint'ы
+        // ----- Загрузка событий с сервера -----
         async function loadParticipatingEvents() {
-            const container = document.getElementById('participatingEventsContainer');
-
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
             try {
-                container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-
-                // Используем рабочий диагностический endpoint
-                const user = await fetchUserData();
-                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
-                const events = debugData.participating;
-
-                console.log('📋 Данные для участия:', events);
-                displayEvents(events, 'participatingEventsContainer', 'participating');
+                const resp = await fetch('/api/events/participating', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!resp.ok) throw new Error('Ошибка загрузки участвующих событий');
+                participatingEventsRaw = await resp.json();
+                applyParticipatingFilters();
             } catch (error) {
-                console.error('Ошибка загрузки мероприятий для участия:', error);
-                container.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-danger">
-                    Не удалось загрузить мероприятия: ${error.message}
-                    <br><small>Попробуйте обновить страницу</small>
-                </div>
-            </div>
-        `;
+                document.getElementById('participatingEventsContainer').innerHTML = `<div class="col-12"><div class="alert alert-danger">${error.message}</div></div>`;
             }
         }
-
         async function loadOrganizingEvents() {
-            const container = document.getElementById('organizingEventsContainer');
-
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
             try {
-                container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-
-                // Используем рабочий диагностический endpoint
-                const user = await fetchUserData();
-                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
-                const events = debugData.organizing;
-
-                console.log('📋 Данные для организатора:', events);
-                displayEvents(events, 'organizingEventsContainer', 'organizing');
+                const resp = await fetch('/api/events/organizing', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!resp.ok) throw new Error('Ошибка загрузки организуемых событий');
+                organizingEventsRaw = await resp.json();
+                applyOrganizingFilters();
             } catch (error) {
-                console.error('Ошибка загрузки организуемых мероприятий:', error);
-                container.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-danger">
-                    Не удалось загрузить ваши мероприятия: ${error.message}
-                    <br><small>Попробуйте обновить страницу</small>
-                </div>
-            </div>
-        `;
+                document.getElementById('organizingEventsContainer').innerHTML = `<div class="col-12"><div class="alert alert-danger">${error.message}</div></div>`;
             }
         }
-
         async function loadPastEvents() {
-            const container = document.getElementById('pastEventsContainer');
-
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
             try {
-                container.innerHTML = '<div class="loading-spinner"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div></div>';
-
-                // Используем рабочий диагностический endpoint и фильтруем на клиенте
-                const user = await fetchUserData();
-                const debugData = await fetchEvents(`/api/debug/user-events/${user.id}`);
-                const allEvents = debugData.organizing.concat(debugData.participating);
-
-                // Фильтруем прошедшие мероприятия на клиенте
-                const currentDate = new Date().toISOString().split('T')[0];
-                const pastEvents = allEvents.filter(event => event.event_date < currentDate);
-
-                console.log('📋 Данные для прошедших мероприятий:', pastEvents);
-                displayEvents(pastEvents, 'pastEventsContainer', 'past');
+                const resp = await fetch('/api/events/past', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!resp.ok) throw new Error('Ошибка загрузки прошедших событий');
+                pastEventsRaw = await resp.json();
+                applyPastFilters();
             } catch (error) {
-                console.error('Ошибка загрузки прошедших мероприятий:', error);
-                container.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-danger">
-                    Не удалось загрузить прошедшие мероприятия: ${error.message}
-                    <br><small>Попробуйте обновить страницу</small>
-                </div>
-            </div>
-        `;
+                document.getElementById('pastEventsContainer').innerHTML = `<div class="col-12"><div class="alert alert-danger">${error.message}</div></div>`;
             }
         }
 
-        // Функция для отображения организуемых мероприятий
-        function displayOrganizingEvents(events, containerId) {
-            const container = document.getElementById(containerId);
-
-            if (!events || events.length === 0) {
-                container.innerHTML = `
-            <div class="col-12">
-                <div class="empty-state">
-                    <i class="bi bi-megaphone"></i>
-                    <h4>Вы пока не организуете мероприятия</h4>
-                    <p class="text-muted">Создайте своё первое мероприятие и пригласите участников!</p>
-                    <a href="create.html" class="btn btn-success">
-                        <i class="bi bi-plus-circle"></i> Создать событие
-                    </a>
-                </div>
-            </div>
-        `;
-                return;
-            }
-
-            let eventsHTML = '';
-
-            events.forEach(event => {
-                const eventDateTime = new Date(`${event.event_date}T${event.event_time}`);
-                const now = new Date();
-                const isPast = eventDateTime < now;
-                const isToday = event.event_date === new Date().toISOString().split('T')[0];
-
-                // Форматируем дату
-                const formattedDate = formatDate(event.event_date);
-
-                // Определяем статус события
-                let statusBadge = '';
-                let statusText = '';
-
-                if (event.status === 'cancelled') {
-                    statusBadge = 'bg-secondary';
-                    statusText = 'Отменено';
-                } else if (isPast) {
-                    statusBadge = 'bg-secondary';
-                    statusText = 'Завершено';
-                } else if (isToday) {
-                    statusBadge = 'bg-success';
-                    statusText = 'Сегодня';
-                } else {
-                    statusBadge = 'bg-primary';
-                    statusText = 'Активно';
-                }
-
-                eventsHTML += `
-            <div class="col">
-                <div class="card h-100 event-card">
-                    <span class="status-badge badge organizer-badge">
-                        <i class="bi bi-megaphone"></i> Организатор
-                    </span>
-                    <span class="category-badge badge ${event.price > 0 ? 'bg-warning text-dark' : 'bg-success'}">
-                        ${event.price > 0 ? event.price + ' ₽' : 'Бесплатно'}
-                    </span>
-                    
-                    <div class="map-preview">
-                        <div class="d-flex justify-content-center align-items-center h-100 text-muted">
-                            <i class="bi bi-geo-alt-fill me-2"></i>
-                            ${event.location || 'Место проведения'}
-                        </div>
-                    </div>
-                    
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title">${event.title || 'Без названия'}</h5>
-                            <img src="${event.sport_type || 'default'}.svg" class="sport-icon" alt="${event.sport_type || 'Спорт'}">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <span class="badge ${statusBadge} me-2">${statusText}</span>
-                            <span class="badge bg-light text-dark">
-                                <i class="bi bi-tag me-1"></i> 
-                                ${getEventTypeText(event.event_type)}
-                            </span>
-                        </div>
-                        
-                        <p class="card-text">
-                            <i class="bi bi-calendar"></i> <strong>${formattedDate}</strong><br>
-                            <i class="bi bi-clock"></i> ${event.event_time || '00:00'}<br>
-                            <i class="bi bi-geo-alt"></i> ${event.location || 'Место не указано'}<br>
-                            <i class="bi bi-people"></i> 
-                            ${event.participants_count || 0} 
-                            ${event.max_participants ? `/ ${event.max_participants}` : ''} участников
-                        </p>
-                        
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <small class="text-muted">
-                                Создано: ${new Date(event.created_at).toLocaleDateString('ru-RU')}
-                            </small>
-                            
-                            <div>
-                                <a href="event-details.html?id=${event.id}" class="btn btn-outline-primary btn-sm me-2">
-                                    <i class="bi bi-eye"></i> Просмотр
-                                </a>
-                                ${!isPast && event.status !== 'cancelled' ? `
-                                <button class="btn btn-outline-secondary btn-sm" onclick="editEvent(${event.id})">
-                                    <i class="bi bi-pencil"></i> Редактировать
-                                </button>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-            });
-
-            container.innerHTML = eventsHTML;
+        // Вспомогательные функции
+        function createEventDate(event) {
+            if (!event.event_date || !event.event_time) return null;
+            try {
+                const datePart = new Date(event.event_date);
+                if (isNaN(datePart.getTime())) return null;
+                const [hours, minutes] = event.event_time.split(':');
+                datePart.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+                return datePart;
+            } catch (e) { return null; }
         }
-
-        // Вспомогательная функция для получения текста типа события
         function getEventTypeText(eventType) {
             const types = {
-                'training': 'Тренировка',
-                'competition': 'Соревнование',
-                'tournament': 'Турнир',
-                'friendly': 'Товарищеская встреча',
-                'marathon': 'Марафон',
-                'workshop': 'Мастер-класс'
+                'training': 'Тренировка', 'competition': 'Соревнование', 'tournament': 'Турнир',
+                'friendly': 'Товарищеская встреча', 'marathon': 'Марафон', 'workshop': 'Мастер-класс'
             };
             return types[eventType] || eventType || 'Мероприятие';
         }
 
-        // Функции для работы с мероприятиями
-        async function leaveEvent(eventId) {
-            if (!confirm('Вы уверены, что хотите отменить участие в этом мероприятии?')) return;
+        // ----- ФИЛЬТРЫ ДЛЯ "УЧАСТВУЮ" -----
+        function applyParticipatingFilters() {
+            const searchText = document.getElementById('participatingSearchInput').value.toLowerCase().trim();
+            const dateValue = document.getElementById('participatingDateFilter').value;
+            const selectedSports = Array.from(document.querySelectorAll('#participating .participating-sport-filter:checked')).map(cb => cb.value);
+            const selectedTypes = Array.from(document.querySelectorAll('#participating .participating-type-filter:checked')).map(cb => cb.value);
+            const sortBy = document.getElementById('participatingSort').value;
 
-            const token = localStorage.getItem('authToken');
-            try {
-                const response = await fetch(`/api/events/${eventId}/participate`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+            let filtered = [...participatingEventsRaw];
+
+            if (searchText) filtered = filtered.filter(ev => ev.title.toLowerCase().includes(searchText));
+            if (dateValue !== 'all') {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+                const weekLater = new Date(today); weekLater.setDate(today.getDate() + 7);
+                const monthLater = new Date(today); monthLater.setDate(today.getDate() + 30);
+                filtered = filtered.filter(ev => {
+                    const evDate = createEventDate(ev);
+                    if (!evDate) return false;
+                    const dateOnly = new Date(evDate.getFullYear(), evDate.getMonth(), evDate.getDate());
+                    if (dateValue === 'today') return dateOnly.getTime() === today.getTime();
+                    if (dateValue === 'tomorrow') return dateOnly.getTime() === tomorrow.getTime();
+                    if (dateValue === 'week') return dateOnly >= today && dateOnly <= weekLater;
+                    if (dateValue === 'month') return dateOnly >= today && dateOnly <= monthLater;
+                    return false;
                 });
-
-                if (response.ok) {
-                    alert('Участие отменено');
-                    loadParticipatingEvents();
-                } else {
-                    alert('Ошибка при отмене участия');
-                }
-            } catch (error) {
-                console.error('Ошибка:', error);
-                alert('Ошибка при отмене участия');
             }
+            if (selectedSports.length) filtered = filtered.filter(ev => selectedSports.includes(ev.sport_type));
+            if (selectedTypes.length) filtered = filtered.filter(ev => selectedTypes.includes(ev.event_type));
+
+            if (sortBy === 'date_asc') filtered.sort((a, b) => createEventDate(a) - createEventDate(b));
+            else if (sortBy === 'date_desc') filtered.sort((a, b) => createEventDate(b) - createEventDate(a));
+            else if (sortBy === 'popular') filtered.sort((a, b) => (b.participant_count || 0) - (a.participant_count || 0));
+            else if (sortBy === 'price_asc') filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+
+            document.getElementById('participatingCountInfo').innerHTML = `Найдено: ${filtered.length}`;
+            renderEventCards(filtered, 'participatingEventsContainer', 'participating');
         }
 
-        async function deleteEvent(eventId) {
-            if (!confirm('Вы уверены, что хотите удалить это мероприятие?')) return;
+        function resetParticipatingFilters() {
+            document.getElementById('participatingSearchInput').value = '';
+            document.getElementById('participatingDateFilter').value = 'all';
+            document.querySelectorAll('#participating .participating-sport-filter').forEach(cb => cb.checked = false);
+            document.querySelectorAll('#participating .participating-type-filter').forEach(cb => cb.checked = false);
+            document.getElementById('participatingSort').value = 'date_asc';
+            applyParticipatingFilters();
+        }
 
-            const token = localStorage.getItem('authToken');
-            try {
-                const response = await fetch(`/api/events/${eventId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+        // ----- ФИЛЬТРЫ ДЛЯ "ОРГАНИЗУЮ" -----
+        function applyOrganizingFilters() {
+            const searchText = document.getElementById('organizingSearchInput').value.toLowerCase().trim();
+            const dateValue = document.getElementById('organizingDateFilter').value;
+            const selectedSports = Array.from(document.querySelectorAll('#organizing .organizing-sport-filter:checked')).map(cb => cb.value);
+            const selectedTypes = Array.from(document.querySelectorAll('#organizing .organizing-type-filter:checked')).map(cb => cb.value);
+            const sortBy = document.getElementById('organizingSort').value;
+
+            let filtered = [...organizingEventsRaw];
+
+            if (searchText) filtered = filtered.filter(ev => ev.title.toLowerCase().includes(searchText));
+            if (dateValue !== 'all') {
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+                const weekLater = new Date(today); weekLater.setDate(today.getDate() + 7);
+                const monthLater = new Date(today); monthLater.setDate(today.getDate() + 30);
+                filtered = filtered.filter(ev => {
+                    const evDate = createEventDate(ev);
+                    if (!evDate) return false;
+                    const dateOnly = new Date(evDate.getFullYear(), evDate.getMonth(), evDate.getDate());
+                    if (dateValue === 'today') return dateOnly.getTime() === today.getTime();
+                    if (dateValue === 'tomorrow') return dateOnly.getTime() === tomorrow.getTime();
+                    if (dateValue === 'week') return dateOnly >= today && dateOnly <= weekLater;
+                    if (dateValue === 'month') return dateOnly >= today && dateOnly <= monthLater;
+                    return false;
                 });
-
-                if (response.ok) {
-                    alert('Мероприятие удалено');
-                    loadOrganizingEvents();
-                } else {
-                    alert('Ошибка при удалении мероприятия');
-                }
-            } catch (error) {
-                console.error('Ошибка:', error);
-                alert('Ошибка при удалении мероприятия');
             }
+            if (selectedSports.length) filtered = filtered.filter(ev => selectedSports.includes(ev.sport_type));
+            if (selectedTypes.length) filtered = filtered.filter(ev => selectedTypes.includes(ev.event_type));
+
+            if (sortBy === 'date_asc') filtered.sort((a, b) => createEventDate(a) - createEventDate(b));
+            else if (sortBy === 'date_desc') filtered.sort((a, b) => createEventDate(b) - createEventDate(a));
+            else if (sortBy === 'popular') filtered.sort((a, b) => (b.participant_count || 0) - (a.participant_count || 0));
+            else if (sortBy === 'price_asc') filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+
+            document.getElementById('organizingCountInfo').innerHTML = `Найдено: ${filtered.length}`;
+            renderEventCards(filtered, 'organizingEventsContainer', 'organizing');
         }
 
-        // Функция для редактирования события
-        function editEvent(eventId) {
-            window.location.href = `create.html?edit=${eventId}`;
+        function resetOrganizingFilters() {
+            document.getElementById('organizingSearchInput').value = '';
+            document.getElementById('organizingDateFilter').value = 'all';
+            document.querySelectorAll('#organizing .organizing-sport-filter').forEach(cb => cb.checked = false);
+            document.querySelectorAll('#organizing .organizing-type-filter').forEach(cb => cb.checked = false);
+            document.getElementById('organizingSort').value = 'date_asc';
+            applyOrganizingFilters();
         }
 
-        // После загрузки страницы
-        document.addEventListener('DOMContentLoaded', async function () {
-            // Проверяем, авторизован ли пользователь
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                window.location.href = 'aut.html';
-                return;
-            }
+        // ----- ФИЛЬТРЫ ДЛЯ "ЗАВЕРШЁННЫЕ/ОТМЕНЁННЫЕ" -----
+        function applyPastFilters() {
+            const searchText = document.getElementById('pastSearchInput').value.toLowerCase().trim();
+            const period = document.getElementById('periodFilter').value;
+            const role = document.getElementById('roleFilter').value;
+            const selectedSports = Array.from(document.querySelectorAll('.past-sport-filter:checked')).map(cb => cb.value);
+            const selectedTypes = Array.from(document.querySelectorAll('.past-type-filter:checked')).map(cb => cb.value);
+            const sortBy = document.getElementById('pastSort').value;
 
-            // Получаем данные пользователя
-            const user = await fetchUserData();
-            if (user) {
-                // Обновляем имя в шапке
-                const headerUserName = document.getElementById('headerUserName');
-                if (headerUserName) {
-                    headerUserName.textContent = user.full_name || 'Пользователь';
-                }
-            }
+            let filtered = [...pastEventsRaw];
 
-            // Загружаем мероприятия для активной вкладки
-            loadParticipatingEvents();
+            if (searchText) filtered = filtered.filter(ev => ev.title.toLowerCase().includes(searchText));
 
-            // Обработка переключения вкладок
-            document.addEventListener('DOMContentLoaded', function () {
-                const organizingTab = document.getElementById('organizing-tab');
-
-                if (organizingTab) {
-                    organizingTab.addEventListener('shown.bs.tab', function () {
-                        console.log('Переключились на вкладку "Организую"');
-                        loadOrganizingEvents();
+            if (period !== 'all') {
+                const now = new Date();
+                let startDate = null;
+                if (period === 'month') { startDate = new Date(now); startDate.setMonth(now.getMonth() - 1); }
+                if (period === '3months') { startDate = new Date(now); startDate.setMonth(now.getMonth() - 3); }
+                if (period === 'year') { startDate = new Date(now); startDate.setFullYear(now.getFullYear() - 1); }
+                if (startDate) {
+                    filtered = filtered.filter(ev => {
+                        const evDate = createEventDate(ev);
+                        return evDate && evDate >= startDate;
                     });
                 }
-            });
-            const participatingTab = document.getElementById('participating-tab');
-            const organizingTab = document.getElementById('organizing-tab');
-            const pastTab = document.getElementById('past-tab');
-
-            if (participatingTab) {
-                participatingTab.addEventListener('shown.bs.tab', function () {
-                    loadParticipatingEvents();
+            }
+            if (role !== 'all') {
+                filtered = filtered.filter(ev => {
+                    if (role === 'participant') return ev.organizer_id !== currentUserId;
+                    if (role === 'organizer') return ev.organizer_id === currentUserId;
+                    return true;
                 });
             }
+            if (selectedSports.length) filtered = filtered.filter(ev => selectedSports.includes(ev.sport_type));
+            if (selectedTypes.length) filtered = filtered.filter(ev => selectedTypes.includes(ev.event_type));
 
-            if (organizingTab) {
-                organizingTab.addEventListener('shown.bs.tab', function () {
-                    loadOrganizingEvents();
-                });
+            if (sortBy === 'date_desc') filtered.sort((a, b) => createEventDate(b) - createEventDate(a));
+            else if (sortBy === 'date_asc') filtered.sort((a, b) => createEventDate(a) - createEventDate(b));
+            else if (sortBy === 'popular') filtered.sort((a, b) => (b.participant_count || 0) - (a.participant_count || 0));
+
+            document.getElementById('pastCountInfo').innerHTML = `Найдено: ${filtered.length}`;
+            renderEventCards(filtered, 'pastEventsContainer', 'past');
+        }
+
+        function resetPastFilters() {
+            document.getElementById('pastSearchInput').value = '';
+            document.getElementById('periodFilter').value = 'month';
+            document.getElementById('roleFilter').value = 'all';
+            document.querySelectorAll('.past-sport-filter').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.past-type-filter').forEach(cb => cb.checked = false);
+            document.getElementById('pastSort').value = 'date_desc';
+            applyPastFilters();
+        }
+
+        // ----- Отрисовка карточек (та же, что у вас, с escapeHtml) -----
+        function renderEventCards(events, containerId, userRole = null) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            if (!events.length) {
+                container.innerHTML = `<div class="col-12"><div class="empty-state"><i class="bi bi-calendar-x"></i><h4>Нет мероприятий</h4><p class="text-muted">Ничего не найдено</p></div></div>`;
+                return;
             }
+            let html = '';
+            events.forEach(event => {
+                const price = parseFloat(event.price) || 0;
+                const priceText = price > 0 ? `${price.toFixed(2)} ₽` : 'Бесплатно';
+                const priceClass = price > 0 ? 'bg-warning text-dark' : 'bg-success';
+                const sportIcons = {
+                    running: 'running.svg', cycling: 'cycling.svg', football: 'football.svg',
+                    basketball: 'basketball.svg', tennis: 'tennis.svg', volleyball: 'volleyball.svg',
+                    swimming: 'swimming.svg', yoga: 'yoga.svg'
+                };
+                const sportIcon = sportIcons[event.sport_type] || 'default.svg';
+                const sportName = sportNames[event.sport_type] || event.sport_type;
+                const eventDateObj = createEventDate(event);
+                let formattedDate = event.event_date, formattedTime = event.event_time?.substring(0, 5);
+                if (eventDateObj) {
+                    formattedDate = eventDateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+                    formattedTime = eventDateObj.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                }
+                const participantsCount = event.participant_count !== undefined ? event.participant_count : (event.participants_count || 0);
+                const participantsText = event.max_participants ? `${participantsCount}/${event.max_participants}` : participantsCount;
+                const eventTypeText = getEventTypeText(event.event_type);
+                const organizerName = event.organizer_name || 'Неизвестный организатор';
+                const now = new Date();
+                const isPast = eventDateObj && eventDateObj < now;
+                const isCancelled = event.status === 'cancelled';
+                let statusBadgeClass = 'bg-primary', statusText = 'Активно';
+                if (isCancelled) { statusBadgeClass = 'bg-secondary'; statusText = 'Отменено'; }
+                else if (isPast) { statusBadgeClass = 'bg-secondary'; statusText = 'Завершено'; }
+                else if (eventDateObj && eventDateObj.toDateString() === now.toDateString()) { statusBadgeClass = 'bg-success'; statusText = 'Сегодня'; }
+                let roleBadgeClass = '', roleText = '';
+                if (userRole === 'organizing') { roleBadgeClass = 'organizer-badge'; roleText = 'Организатор'; }
+                else if (userRole === 'participating') { roleBadgeClass = 'participant-badge'; roleText = 'Участник'; }
+                else if (userRole === 'past') {
+                    if (event.organizer_id === currentUserId) { roleBadgeClass = 'organizer-badge'; roleText = 'Организатор'; }
+                    else { roleBadgeClass = 'participant-badge'; roleText = 'Участник'; }
+                }
+                let actionButtons = '';
+                const isOrganizer = (userRole === 'organizing') || (event.organizer_id === currentUserId);
+                if (isOrganizer && !isPast && !isCancelled) {
+                    actionButtons = `<button class="btn btn-outline-secondary btn-sm me-1" onclick="editEvent(${event.id})"><i class="bi bi-pencil"></i> Редактировать</button>
+                                 <button class="btn btn-outline-danger btn-sm" onclick="deleteEvent(${event.id})"><i class="bi bi-x-circle"></i> Отменить</button>`;
+                } else if (userRole === 'participating' && !isPast && !isCancelled) {
+                    actionButtons = `<button class="btn btn-outline-danger btn-sm" onclick="leaveEvent(${event.id})"><i class="bi bi-person-x"></i> Отменить</button>`;
+                }
+                let cancelInfo = '';
+                if (event.status === 'cancelled' && event.cancel_reason) cancelInfo = `<div class="small text-danger mt-1"><i class="bi bi-info-circle me-1"></i>${event.cancel_reason}</div>`;
+                html += `<div class="col"><div class="card h-100 event-card">
+                ${roleText ? `<span class="status-badge badge ${roleBadgeClass}"><i class="bi bi-${roleText === 'Организатор' ? 'megaphone' : 'person-check'}"></i> ${roleText}</span>` : ''}
+                <span class="category-badge badge ${priceClass}">${priceText}</span>
+                <div class="map-preview"></div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title">${escapeHtml(event.title)}</h5>
+                        <img src="${sportIcon}" class="sport-icon" alt="${event.sport_type}">
+                    </div>
+                    <div class="mb-2">
+                        <span class="badge ${statusBadgeClass} me-1">${statusText}</span>
+                        <span class="badge bg-light text-dark"><i class="bi bi-activity me-1"></i>${sportName}</span>
+                        <span class="badge bg-light text-dark ms-1"><i class="bi bi-tag me-1"></i>${eventTypeText}</span>
+                        ${cancelInfo}
+                    </div>
+                    <p class="card-text">
+                        <i class="bi bi-calendar"></i> ${formattedDate}<br>
+                        <i class="bi bi-clock"></i> ${formattedTime}<br>
+                        <i class="bi bi-geo-alt"></i> ${escapeHtml(event.location || '—')}<br>
+                        <i class="bi bi-people"></i> ${participantsText} участников
+                    </p>
+                    <div class="mt-2 small text-muted border-top pt-2">
+                        <div><i class="bi bi-person me-1"></i> Организатор: ${escapeHtml(organizerName)}</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <a href="event-details.html?id=${event.id}" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i> Просмотр</a>
+                        ${actionButtons}
+                    </div>
+                </div>
+            </div></div>`;
+            });
+            container.innerHTML = html;
+        }
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function (m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
 
-            if (pastTab) {
-                pastTab.addEventListener('shown.bs.tab', function () {
-                    loadPastEvents();
-                });
+        // Действия с событиями (leaveEvent, deleteEvent, editEvent, cancelModal)
+        async function leaveEvent(eventId) {
+            if (!confirm('Отменить участие?')) return;
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/events/${eventId}/participate`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.ok) { alert('Участие отменено'); loadParticipatingEvents(); }
+                else alert('Ошибка');
+            } catch (e) { alert('Ошибка'); }
+        }
+        let cancelEventId = null;
+        function showCancelModal(eventId) { cancelEventId = eventId; document.getElementById('cancelReasonSelect').value = ''; document.getElementById('cancelReasonCustom').classList.add('d-none'); new bootstrap.Modal(document.getElementById('cancelModal')).show(); }
+        function deleteEvent(eventId) { showCancelModal(eventId); }
+        function editEvent(eventId) { window.location.href = `create.html?edit=${eventId}`; }
+        document.addEventListener('change', function (e) {
+            if (e.target.id === 'cancelReasonSelect') {
+                const customInput = document.getElementById('cancelReasonCustom');
+                if (e.target.value === 'Другое') customInput.classList.remove('d-none');
+                else customInput.classList.add('d-none');
             }
+        });
+        document.getElementById('confirmCancelBtn')?.addEventListener('click', async function () {
+            let cancelReason = document.getElementById('cancelReasonSelect').value;
+            if (cancelReason === 'Другое') cancelReason = document.getElementById('cancelReasonCustom').value.trim();
+            if (!cancelReason) { alert('Укажите причину'); return; }
+            const token = localStorage.getItem('authToken');
+            try {
+                const response = await fetch(`/api/events/${cancelEventId}/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ cancel_reason: cancelReason }) });
+                if (response.ok) { alert('Мероприятие отменено'); bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide(); loadOrganizingEvents(); }
+                else { const err = await response.json(); alert('Ошибка: ' + err.error); }
+            } catch (e) { alert('Ошибка'); }
+        });
 
-            // Обработка выхода из системы
-            const logoutBtn = document.querySelector('.dropdown-item.text-danger');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    localStorage.removeItem('authToken');
-                    window.location.href = 'aut.html';
-                });
-            }
-
-            // Обработка фильтров
-            document.getElementById('applyFilters')?.addEventListener('click', function () {
-                loadParticipatingEvents();
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', async function () {
+            const token = localStorage.getItem('authToken');
+            if (!token) { window.location.href = 'aut.html'; return; }
+            const user = await fetchUserData();
+            if (user) document.getElementById('headerUserName').textContent = user.full_name || 'Пользователь';
+            loadNotifications();
+            await loadParticipatingEvents();
+            await loadOrganizingEvents();
+            await loadPastEvents();
+            initParticipatingFilters();
+            initOrganizingFilters();
+            initPastFilters();
+            // ========== АВТОМАТИЧЕСКОЕ ПРИМЕНЕНИЕ ФИЛЬТРОВ ==========
+            // Вкладка "Участвую"
+            const pSearch = document.getElementById('participatingSearchInput');
+            const pDate = document.getElementById('participatingDateFilter');
+            const pSort = document.getElementById('participatingSort');
+            const pReset = document.getElementById('participatingResetBtn');
+            if (pSearch) pSearch.addEventListener('input', applyParticipatingFilters);
+            if (pDate) pDate.addEventListener('change', applyParticipatingFilters);
+            if (pSort) pSort.addEventListener('change', applyParticipatingFilters);
+            document.querySelectorAll('#participating .participating-sport-filter, #participating .participating-type-filter').forEach(cb => {
+                cb.addEventListener('change', applyParticipatingFilters);
             });
+            if (pReset) pReset.addEventListener('click', resetParticipatingFilters);
 
-            document.getElementById('applyOrganizingFilters')?.addEventListener('click', function () {
-                loadOrganizingEvents();
+            // Вкладка "Организую"
+            const oSearch = document.getElementById('organizingSearchInput');
+            const oDate = document.getElementById('organizingDateFilter');
+            const oSort = document.getElementById('organizingSort');
+            const oReset = document.getElementById('organizingResetBtn');
+            if (oSearch) oSearch.addEventListener('input', applyOrganizingFilters);
+            if (oDate) oDate.addEventListener('change', applyOrganizingFilters);
+            if (oSort) oSort.addEventListener('change', applyOrganizingFilters);
+            document.querySelectorAll('#organizing .organizing-sport-filter, #organizing .organizing-type-filter').forEach(cb => {
+                cb.addEventListener('change', applyOrganizingFilters);
             });
+            if (oReset) oReset.addEventListener('click', resetOrganizingFilters);
 
-            document.getElementById('applyPastFilters')?.addEventListener('click', function () {
-                loadPastEvents();
+            // Вкладка "Завершённые/Отменённые"
+            const pastSearch = document.getElementById('pastSearchInput');
+            const period = document.getElementById('periodFilter');
+            const role = document.getElementById('roleFilter');
+            const pastSort = document.getElementById('pastSort');
+            const pastReset = document.getElementById('pastResetBtn');
+            if (pastSearch) pastSearch.addEventListener('input', applyPastFilters);
+            if (period) period.addEventListener('change', applyPastFilters);
+            if (role) role.addEventListener('change', applyPastFilters);
+            if (pastSort) pastSort.addEventListener('change', applyPastFilters);
+            document.querySelectorAll('.past-sport-filter, .past-type-filter').forEach(cb => {
+                cb.addEventListener('change', applyPastFilters);
             });
+            if (pastReset) pastReset.addEventListener('click', resetPastFilters);
         });
     </script>
 </body>

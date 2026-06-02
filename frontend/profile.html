@@ -10,20 +10,20 @@
     <script>
         // Система защиты авторизации
         (function () {
-            // Разрешенные страницы без авторизации
-            const allowedPages = ['aut.html', 'reg.html'];
+            // Разрешенные страницы без авторизации (теперь с welcome.html)
+            const allowedPages = ['welcome.html', 'aut.html', 'reg.html'];
             const currentPage = window.location.pathname.split('/').pop() || 'index.html';
 
             const token = localStorage.getItem('authToken');
             const isLoggedIn = !!token;
 
-            // Если пользователь не авторизован и пытается получить доступ к защищенной странице
+            // Если не авторизован и пытается попасть на защищённую страницу -> на приветственную
             if (!isLoggedIn && !allowedPages.includes(currentPage)) {
                 sessionStorage.setItem('redirectUrl', window.location.href);
-                window.location.href = 'aut.html';
+                window.location.href = 'welcome.html';
             }
 
-            // Если пользователь авторизован и пытается получить доступ к странице входа/регистрации
+            // Если авторизован и пытается зайти на страницы входа/регистрации/приветствия -> на главную
             if (isLoggedIn && allowedPages.includes(currentPage)) {
                 window.location.href = 'index.html';
             }
@@ -206,6 +206,24 @@
                     </li>
                 </ul>
                 <div class="d-flex align-items-center">
+                    <!-- Уведомления (слева) -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-light position-relative" type="button" data-bs-toggle="dropdown"
+                            id="notificationsDropdown">
+                            <i class="bi bi-bell fs-5"></i>
+                            <span id="notificationsCount"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end"
+                            style="width: 380px; max-height: 400px; overflow-y: auto; overflow-x: hidden; padding: 0;"
+                            id="notificationsMenu">
+                            <h6 class="dropdown-header px-3 pt-2">Уведомления</h6>
+                            <div id="notificationsList"
+                                style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; padding: 0 8px 8px;">
+                                <div class="dropdown-item-text text-muted px-3 py-2">Загрузка...</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
                             id="profileDropdown" data-bs-toggle="dropdown">
@@ -327,6 +345,22 @@
                         </div>
                     </div>
                 </div>
+                <!-- Рейтинг и отзывы -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Рейтинг и отзывы</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="profileRating">
+                            <p class="text-muted">Загрузка рейтинга...</p>
+                        </div>
+                        <hr>
+                        <h6>Последние отзывы</h6>
+                        <div id="profileReviews">
+                            <p class="text-muted">Загрузка отзывов...</p>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Предстоящие мероприятия -->
                 <div class="card shadow-sm mb-4">
@@ -422,6 +456,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let currentUserId = null;
+
         // Показываем индикатор загрузки
         function showLoading() {
             document.getElementById('loadingOverlay').style.display = 'flex';
@@ -500,6 +536,7 @@
                 }
 
                 const user = await response.json();
+                currentUserId = user.id;
                 console.log('Данные пользователя:', user); // Для отладки
 
                 // 1. Обновление шапки сайта (правый верхний угол) - full_name
@@ -541,10 +578,127 @@
             }
         }
 
+        // Загрузка рейтинга и отзывов текущего пользователя
+        async function loadProfileRating() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                // Получаем ID текущего пользователя (можно из глобальной переменной или из localStorage)
+                const userId = currentUserId; // currentUserId должна быть определена (обычно после loadUserProfile)
+                if (!userId) return;
+
+                // Рейтинг
+                const ratingResp = await fetch(`/api/users/${userId}/rating`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (ratingResp.ok) {
+                    const ratingData = await ratingResp.json();
+                    const ratingHtml = `
+                <div class="d-flex align-items-center">
+                    <span class="fs-2 me-3">${ratingData.average_rating > 0 ? '⭐' + ratingData.average_rating : 'Нет оценок'}</span>
+                    <span class="text-muted">(${ratingData.total_reviews} отзывов)</span>
+                </div>`;
+                    document.getElementById('profileRating').innerHTML = ratingHtml;
+                } else {
+                    document.getElementById('profileRating').innerHTML = '<p class="text-muted">Не удалось загрузить рейтинг</p>';
+                }
+
+                // Отзывы
+                const reviewsResp = await fetch(`/api/users/${userId}/reviews`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (reviewsResp.ok) {
+                    const reviews = await reviewsResp.json();
+                    let reviewsHtml = '';
+                    if (reviews.length === 0) {
+                        reviewsHtml = '<p class="text-muted">Пока нет отзывов</p>';
+                    } else {
+                        reviews.slice(0, 5).forEach(review => {
+                            const stars = '⭐'.repeat(review.rating);
+                            reviewsHtml += `
+                        <div class="mb-2 p-2 border rounded">
+                            <div class="d-flex justify-content-between">
+                                <strong>${review.reviewer_username}</strong>
+                                <small class="text-muted">${new Date(review.created_at).toLocaleDateString('ru-RU')}</small>
+                            </div>
+                            <div>${stars}</div>
+                            <p class="mb-1">${review.comment || ''}</p>
+                            <small class="text-muted">Событие: ${review.event_title}</small>
+                        </div>`;
+                        });
+                        if (reviews.length > 5) {
+                            reviewsHtml += `<a href="#" onclick="alert('Полный список отзывов будет доступен позже')">Показать все (${reviews.length})</a>`;
+                        }
+                    }
+                    document.getElementById('profileReviews').innerHTML = reviewsHtml;
+                } else {
+                    document.getElementById('profileReviews').innerHTML = '<p class="text-muted">Не удалось загрузить отзывы</p>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки рейтинга:', error);
+            }
+        }
+
+        // Загрузка непрочитанных уведомлений
+        async function loadNotifications() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                const resp = await fetch('/api/notifications?unread_only=true', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!resp.ok) return;
+                const notifications = await resp.json();
+                const countEl = document.getElementById('notificationsCount');
+                const listEl = document.getElementById('notificationsList');
+
+                if (notifications.length > 0) {
+                    countEl.classList.remove('d-none');
+                    countEl.textContent = notifications.length;
+                } else {
+                    countEl.classList.add('d-none');
+                }
+
+                listEl.innerHTML = notifications.length === 0
+                    ? '<div class="dropdown-item-text text-muted px-3 py-2">Нет новых уведомлений</div>'
+                    : notifications.map(n => `
+                <a class="dropdown-item d-flex justify-content-between align-items-center notification-item px-3 py-2"
+                   href="#" data-id="${n.id}" data-event-id="${n.event_id}"
+                   onclick="markAsRead(${n.id}, ${n.event_id})">
+                    <div class="small me-3">${n.message}</div>
+                    <i class="bi bi-circle-fill text-primary small flex-shrink-0"></i>
+                </a>
+            `).join('');
+            } catch (error) {
+                console.error('Ошибка загрузки уведомлений:', error);
+            }
+        }
+
+        // Отметить уведомление как прочитанное и перейти к событию
+        async function markAsRead(notificationId, eventId) {
+            const token = localStorage.getItem('authToken');
+            try {
+                await fetch(`/api/notifications/${notificationId}/read`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (e) { /* игнорируем */ }
+            window.location.href = `event-details.html?id=${eventId}`;
+        }
+
+        // Периодическое обновление (раз в 10 секунд)
+        setInterval(loadNotifications, 10000);
+
         // Инициализация страницы
-        document.addEventListener('DOMContentLoaded', () => {
-            // Загрузка данных профиля
-            loadProfileData();
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Загружаем профиль пользователя (установит currentUserId)
+            await loadProfileData();
+
+            // Теперь можно загрузить рейтинг и отзывы
+            await loadProfileRating();
+
+            // Уведомления можно запустить без ожидания
+            loadNotifications();
 
             // Обработчики выхода
             document.getElementById('logoutLink').addEventListener('click', (e) => {
@@ -557,7 +711,7 @@
                 logout();
             });
 
-            // Редактирование аватара
+            // Заглушка для аватара
             document.getElementById('editAvatarBtn').addEventListener('click', function () {
                 alert('Функция изменения аватара будет доступна в следующем обновлении');
             });

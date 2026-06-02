@@ -10,20 +10,20 @@
     <script>
         // Система защиты авторизации
         (function () {
-            // Разрешенные страницы без авторизации
-            const allowedPages = ['aut.html', 'reg.html'];
+            // Разрешенные страницы без авторизации (теперь с welcome.html)
+            const allowedPages = ['welcome.html', 'aut.html', 'reg.html'];
             const currentPage = window.location.pathname.split('/').pop() || 'index.html';
 
             const token = localStorage.getItem('authToken');
             const isLoggedIn = !!token;
 
-            // Если пользователь не авторизован и пытается получить доступ к защищенной странице
+            // Если не авторизован и пытается попасть на защищённую страницу -> на приветственную
             if (!isLoggedIn && !allowedPages.includes(currentPage)) {
                 sessionStorage.setItem('redirectUrl', window.location.href);
-                window.location.href = 'aut.html';
+                window.location.href = 'welcome.html';
             }
 
-            // Если пользователь авторизован и пытается получить доступ к странице входа/регистрации
+            // Если авторизован и пытается зайти на страницы входа/регистрации/приветствия -> на главную
             if (isLoggedIn && allowedPages.includes(currentPage)) {
                 window.location.href = 'index.html';
             }
@@ -178,6 +178,24 @@
                     </li>
                 </ul>
                 <div class="d-flex align-items-center">
+                    <!-- Уведомления (слева) -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-light position-relative" type="button" data-bs-toggle="dropdown"
+                            id="notificationsDropdown">
+                            <i class="bi bi-bell fs-5"></i>
+                            <span id="notificationsCount"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end"
+                            style="width: 380px; max-height: 400px; overflow-y: auto; overflow-x: hidden; padding: 0;"
+                            id="notificationsMenu">
+                            <h6 class="dropdown-header px-3 pt-2">Уведомления</h6>
+                            <div id="notificationsList"
+                                style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; padding: 0 8px 8px;">
+                                <div class="dropdown-item-text text-muted px-3 py-2">Загрузка...</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
                             data-bs-toggle="dropdown">
@@ -330,10 +348,27 @@
                     </div>
 
                     <!-- Кнопки -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Отображать организатора как</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="displayType" id="displayUsername"
+                                value="username" checked>
+                            <label class="form-check-label" for="displayUsername">Никнейм</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="displayType" id="displayFullName"
+                                value="full_name">
+                            <label class="form-check-label" for="displayFullName">Имя и фамилия</label>
+                        </div>
+                    </div>
                     <div class="d-flex justify-content-between mt-5">
                         <div>
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success" id="submitEventBtn">
                                 <i class="bi bi-check-circle me-1"></i> Опубликовать событие
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" id="cancelEditBtn"
+                                style="display: none;">
+                                <i class="bi bi-x-circle me-1"></i> Отменить редактирование
                             </button>
                         </div>
                     </div>
@@ -443,10 +478,97 @@
         // Проверяем, редактируем ли существующее событие
         const urlParams = new URLSearchParams(window.location.search);
         const editEventId = urlParams.get('edit');
-        if (editEventId) {
-            console.log('Режим редактирования события ID:', editEventId);
-            // Здесь можно добавить загрузку данных события для редактирования
+        let editingEvent = null;
+
+        // Загрузка непрочитанных уведомлений
+        async function loadNotifications() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                const resp = await fetch('/api/notifications?unread_only=true', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!resp.ok) return;
+                const notifications = await resp.json();
+                const countEl = document.getElementById('notificationsCount');
+                const listEl = document.getElementById('notificationsList');
+
+                if (notifications.length > 0) {
+                    countEl.classList.remove('d-none');
+                    countEl.textContent = notifications.length;
+                } else {
+                    countEl.classList.add('d-none');
+                }
+
+                listEl.innerHTML = notifications.length === 0
+                    ? '<div class="dropdown-item-text text-muted px-3 py-2">Нет новых уведомлений</div>'
+                    : notifications.map(n => `
+                <a class="dropdown-item d-flex justify-content-between align-items-center notification-item px-3 py-2"
+                   href="#" data-id="${n.id}" data-event-id="${n.event_id}"
+                   onclick="markAsRead(${n.id}, ${n.event_id})">
+                    <div class="small me-3">${n.message}</div>
+                    <i class="bi bi-circle-fill text-primary small flex-shrink-0"></i>
+                </a>
+            `).join('');
+            } catch (error) {
+                console.error('Ошибка загрузки уведомлений:', error);
+            }
         }
+
+        // Отметить уведомление как прочитанное и перейти к событию
+        async function markAsRead(notificationId, eventId) {
+            const token = localStorage.getItem('authToken');
+            try {
+                await fetch(`/api/notifications/${notificationId}/read`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (e) { /* игнорируем */ }
+            window.location.href = `event-details.html?id=${eventId}`;
+        }
+
+        // Периодическое обновление (раз в 10 секунд)
+        setInterval(loadNotifications, 10000);
+
+        // Функция для загрузки данных события
+        async function loadEventForEdit(eventId) {
+            const token = localStorage.getItem('authToken');
+            if (!token) return null;
+            try {
+                const response = await fetch(`/api/events/${eventId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    return await response.json();
+                }
+            } catch (e) {
+                console.error('Ошибка загрузки события', e);
+            }
+            return null;
+        }
+
+        // Функция для обновления события
+        async function updateEvent(eventId, eventData) {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`/api/events/${eventId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(eventData)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorData;
+                try { errorData = JSON.parse(errorText); } catch { errorData = { error: errorText }; }
+                throw new Error(errorData.error || `HTTP ${response.status}`);
+            }
+            return await response.json();
+        }
+
+
         // Новая функция для получения данных пользователя
         async function fetchUserData() {
             const token = localStorage.getItem('authToken');
@@ -555,6 +677,52 @@
             // 2. Устанавливаем ID организатора
             document.getElementById('organizerId').value = user.id;
 
+            // Если редактирование, загружаем событие
+            if (editEventId) {
+                editingEvent = await loadEventForEdit(editEventId);
+                if (editingEvent) {
+                    // Заполняем форму
+                    document.getElementById('eventTitle').value = editingEvent.title || '';
+                    document.getElementById('eventDescription').value = editingEvent.description || '';
+                    document.getElementById('eventDate').value = editingEvent.event_date ? editingEvent.event_date.split('T')[0] : '';
+                    document.getElementById('eventTime').value = editingEvent.event_time || '';
+                    document.getElementById('sportType').value = editingEvent.sport_type || '';
+                    document.getElementById('eventType').value = editingEvent.event_type || '';
+                    document.getElementById('maxParticipants').value = editingEvent.max_participants || 20;
+                    document.getElementById('eventPrice').value = editingEvent.price || 0;
+                    document.getElementById('eventLocation').value = editingEvent.location || '';
+                    document.getElementById('ageRestriction').value = editingEvent.age_restriction || 0;
+
+                    // Определяем, какое имя отображалось ранее, чтобы установить радио
+                    if (user) {
+                        if (editingEvent.organizer_display_name === user.full_name) {
+                            document.getElementById('displayFullName').checked = true;
+                        } else {
+                            document.getElementById('displayUsername').checked = true;
+                        }
+                    }
+
+                    // Меняем заголовок и кнопку
+                    document.querySelector('.create-header h1').textContent = 'Редактировать событие';
+                    document.querySelector('.create-header p.lead').textContent = 'Внесите необходимые изменения';
+                    const submitBtn = document.getElementById('submitEventBtn');
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Сохранить изменения';
+
+                    // Показываем кнопку отмены
+                    document.getElementById('cancelEditBtn').style.display = 'inline-block';
+
+                    // Разрешаем исходную дату как минимальную
+                    document.getElementById('eventDate').min = editingEvent.event_date ? editingEvent.event_date.split('T')[0] : '';
+
+                    document.getElementById('cancelEditBtn').addEventListener('click', function () {
+                        window.location.href = 'my_events.html';
+                    });
+                } else {
+                    alert('Событие не найдено или доступ запрещён');
+                    window.location.href = 'my_events.html';
+                }
+            }
+
             // 3. Обработка поля цены (без изменений)
             const priceInput = document.getElementById('eventPrice');
             priceInput.addEventListener('input', function () {
@@ -590,16 +758,16 @@
             function setupDateTimeValidation() {
                 const dateInput = document.getElementById('eventDate');
                 const timeInput = document.getElementById('eventTime');
-                const submitBtn = document.querySelector('button[type="submit"]');
+                const submitBtn = document.getElementById('submitEventBtn');
                 const validationAlert = document.getElementById('datetimeValidationAlert');
                 const validationMessage = document.getElementById('datetimeValidationMessage');
+                const isEditMode = !!editEventId;
 
                 function validateDateTime() {
                     const eventDate = dateInput.value;
                     const eventTime = timeInput.value;
 
                     if (!eventDate || !eventTime) {
-                        // Если одно из полей пустое
                         validationAlert.classList.add('d-none');
                         dateInput.classList.remove('is-invalid');
                         timeInput.classList.remove('is-invalid');
@@ -610,36 +778,59 @@
                         return;
                     }
 
-                    if (!isValidEventDateTime(eventDate, eventTime)) {
-                        // Если дата/время в прошлом
-                        validationAlert.classList.remove('d-none');
-                        validationMessage.textContent = 'Нельзя создавать события в прошедшем времени или незаблаговременно. Выберите будущую дату или время. Время можно выбрать минимум за 3 часа до начала события от времени создания объявления.';
+                    const eventDateTime = new Date(`${eventDate}T${eventTime}:00+03:00`);
+                    const now = new Date();
 
-                        dateInput.classList.add('is-invalid');
-                        timeInput.classList.add('is-invalid');
-
-                        submitBtn.disabled = true;
-                        submitBtn.title = 'Исправьте дату и время события';
-                        submitBtn.classList.add('btn-secondary');
-                        submitBtn.classList.remove('btn-success');
+                    if (!editEventId) {
+                        const minTime = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+                        if (eventDateTime <= minTime) {
+                            showError('Нельзя создавать события в прошедшем времени. Минимум за 4 часа до начала.');
+                            return;
+                        }
                     } else {
-                        // Если все корректно
-                        validationAlert.classList.add('d-none');
-                        dateInput.classList.remove('is-invalid');
-                        timeInput.classList.remove('is-invalid');
-
-                        submitBtn.disabled = false;
-                        submitBtn.title = 'Нажмите для публикации события';
-                        submitBtn.classList.remove('btn-secondary');
-                        submitBtn.classList.add('btn-success');
+                        if (editingEvent) {
+                            // Обрезаем секунды из времени, полученного с сервера (HH:MM:SS → HH:MM)
+                            const originalTime = editingEvent.event_time.substring(0, 5);
+                            const originalDateTime = new Date(`${editingEvent.event_date.split('T')[0]}T${originalTime}:00+03:00`);
+                            if (eventDateTime < originalDateTime) {
+                                showError('Нельзя перенести событие на более раннее время. Отмените событие и создайте новое.');
+                                return;
+                            }
+                        }
+                        if (eventDateTime <= now) {
+                            showError('Нельзя установить прошедшее время.');
+                            return;
+                        }
                     }
+
+                    // Всё корректно
+                    clearError();
+                }
+
+                function showError(message) {
+                    validationAlert.classList.remove('d-none');
+                    validationMessage.textContent = message;
+                    dateInput.classList.add('is-invalid');
+                    timeInput.classList.add('is-invalid');
+                    submitBtn.disabled = true;
+                    submitBtn.title = 'Исправьте дату и время события';
+                    submitBtn.classList.add('btn-secondary');
+                    submitBtn.classList.remove('btn-success');
+                }
+
+                function clearError() {
+                    validationAlert.classList.add('d-none');
+                    dateInput.classList.remove('is-invalid');
+                    timeInput.classList.remove('is-invalid');
+                    submitBtn.disabled = false;
+                    submitBtn.title = isEditMode ? 'Сохранить изменения' : 'Опубликовать событие';
+                    submitBtn.classList.remove('btn-secondary');
+                    submitBtn.classList.add('btn-success');
                 }
 
                 dateInput.addEventListener('change', validateDateTime);
                 timeInput.addEventListener('change', validateDateTime);
                 timeInput.addEventListener('input', validateDateTime);
-
-                // Инициализируем проверку при загрузке
                 validateDateTime();
             }
 
@@ -692,9 +883,12 @@
                 const eventDate = document.getElementById('eventDate').value;
                 const eventTime = document.getElementById('eventTime').value;
 
-                if (!isValidEventDateTime(eventDate, eventTime)) {
-                    alert('Нельзя создавать события в прошедшем времени. Пожалуйста, выберите будущую дату и время.');
-                    return;
+                if (!editEventId) {
+                    // Проверка только для создания
+                    if (!isValidEventDateTime(eventDate, eventTime)) {
+                        alert('Нельзя создавать события в прошедшем времени. Минимум за 4 часа до начала.');
+                        return;
+                    }
                 }
 
                 // Сбор данных
@@ -709,22 +903,31 @@
                     price: parseFloat(document.getElementById('eventPrice').value) || 0,
                     location: document.getElementById('eventLocation').value,
                     age_restriction: parseInt(document.getElementById('ageRestriction').value) || 0,
-                    organizer_id: user.id
+                    organizer_display_type: document.querySelector('input[name="displayType"]:checked').value  // ← ДОБАВЛЕНО
                 };
 
                 // Показ загрузки
                 const submitBtn = document.querySelector('button[type="submit"]');
                 const originalBtnText = submitBtn.innerHTML;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Создание...';
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Сохранение...';
                 submitBtn.disabled = true;
 
                 try {
-                    const result = await createEvent(eventData);
-                    alert('Событие успешно создано! Номер события: ' + result.id);
-                    window.location.href = `event-details.html?id=${result.id}`;
+                    let result;
+                    if (editEventId) {
+                        // Редактирование: используем PUT
+                        result = await updateEvent(editEventId, eventData);
+                        alert('Событие успешно обновлено!');
+                        window.location.href = `event-details.html?id=${editEventId}`;
+                    } else {
+                        // Создание: используем POST
+                        result = await createEvent(eventData);
+                        alert('Событие успешно создано! Номер события: ' + result.id);
+                        window.location.href = `event-details.html?id=${result.id}`;
+                    }
                 } catch (error) {
-                    alert('Ошибка при создании события: ' + error.message);
-                    console.error('Ошибка создания:', error);
+                    alert('Ошибка: ' + error.message);
+                    console.error('Ошибка:', error);
                 } finally {
                     submitBtn.innerHTML = originalBtnText;
                     submitBtn.disabled = false;
@@ -743,7 +946,7 @@
 
             // 8. Установка минимальной даты
             setMinDate();
-
+            loadNotifications();
             // Инициализация предпросмотра
             updatePreview();
         });

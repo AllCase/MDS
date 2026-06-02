@@ -7,6 +7,28 @@
     <title>Детали события - Match Day Sync</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script>
+        // Система защиты авторизации
+        (function () {
+            // Разрешенные страницы без авторизации (теперь с welcome.html)
+            const allowedPages = ['welcome.html', 'aut.html', 'reg.html'];
+            const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+
+            const token = localStorage.getItem('authToken');
+            const isLoggedIn = !!token;
+
+            // Если не авторизован и пытается попасть на защищённую страницу -> на приветственную
+            if (!isLoggedIn && !allowedPages.includes(currentPage)) {
+                sessionStorage.setItem('redirectUrl', window.location.href);
+                window.location.href = 'welcome.html';
+            }
+
+            // Если авторизован и пытается зайти на страницы входа/регистрации/приветствия -> на главную
+            if (isLoggedIn && allowedPages.includes(currentPage)) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
     <style>
         .event-header {
             background: linear-gradient(120deg, #1a2a6c, #b21f1f, #1a2a6c);
@@ -59,6 +81,24 @@
 
                 <!-- Поиск и профиль -->
                 <div class="d-flex align-items-center">
+                    <!-- Уведомления (слева) -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-light position-relative" type="button" data-bs-toggle="dropdown"
+                            id="notificationsDropdown">
+                            <i class="bi bi-bell fs-5"></i>
+                            <span id="notificationsCount"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end"
+                            style="width: 380px; max-height: 400px; overflow-y: auto; overflow-x: hidden; padding: 0;"
+                            id="notificationsMenu">
+                            <h6 class="dropdown-header px-3 pt-2">Уведомления</h6>
+                            <div id="notificationsList"
+                                style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; padding: 0 8px 8px;">
+                                <div class="dropdown-item-text text-muted px-3 py-2">Загрузка...</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="dropdown">
                         <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
                             data-bs-toggle="dropdown">
@@ -199,6 +239,33 @@
                     </div>
                 </div>
 
+                <div class="card mb-4" id="reviewCard" style="display: none;">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Оставить отзыв</h5>
+                    </div>
+                    <div class="card-body">
+                        <p id="reviewTarget"><i>Загрузка...</i></p>
+                        <div class="mb-2">
+                            <label class="form-label">Оценка</label>
+                            <div id="starRating">
+                                <i class="bi bi-star fs-4 text-muted star-icon" data-rating="1"></i>
+                                <i class="bi bi-star fs-4 text-muted star-icon" data-rating="2"></i>
+                                <i class="bi bi-star fs-4 text-muted star-icon" data-rating="3"></i>
+                                <i class="bi bi-star fs-4 text-muted star-icon" data-rating="4"></i>
+                                <i class="bi bi-star fs-4 text-muted star-icon" data-rating="5"></i>
+                            </div>
+                            <input type="hidden" id="reviewRating" value="0">
+                        </div>
+                        <div class="mb-3">
+                            <label for="reviewComment" class="form-label">Комментарий (необязательно)</label>
+                            <textarea class="form-control" id="reviewComment" rows="2"></textarea>
+                        </div>
+                        <button class="btn btn-primary w-100" id="submitReviewBtn">Отправить отзыв</button>
+                        <div id="reviewSuccess" class="text-success mt-2 d-none"><i class="bi bi-check-circle"></i>
+                            Отзыв отправлен!</div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header bg-light">
                         <h5 class="mb-0">Действия</h5>
@@ -215,6 +282,39 @@
             </div>
         </div>
     </div>
+    <!-- Модальное окно для отзыва -->
+    <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reviewModalLabel">Оставить отзыв</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="reviewTargetModal"><i>Загрузка...</i></p>
+                    <div class="mb-2">
+                        <label class="form-label">Оценка</label>
+                        <div id="starRatingModal">
+                            <i class="bi bi-star fs-4 text-muted star-icon-modal" data-rating="1"></i>
+                            <i class="bi bi-star fs-4 text-muted star-icon-modal" data-rating="2"></i>
+                            <i class="bi bi-star fs-4 text-muted star-icon-modal" data-rating="3"></i>
+                            <i class="bi bi-star fs-4 text-muted star-icon-modal" data-rating="4"></i>
+                            <i class="bi bi-star fs-4 text-muted star-icon-modal" data-rating="5"></i>
+                        </div>
+                        <input type="hidden" id="reviewRatingModal" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="reviewCommentModal" class="form-label">Комментарий (необязательно)</label>
+                        <textarea class="form-control" id="reviewCommentModal" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="submitReviewModalBtn">Отправить отзыв</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Футер (такой же, как на других страницах) -->
     <footer class="bg-dark text-white py-4">
@@ -223,108 +323,176 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Функция для загрузки деталей события
+        let currentUserId = null;
+
+        // Загрузка непрочитанных уведомлений
+        async function loadNotifications() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                const resp = await fetch('/api/notifications?unread_only=true', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!resp.ok) return;
+                const notifications = await resp.json();
+                const countEl = document.getElementById('notificationsCount');
+                const listEl = document.getElementById('notificationsList');
+
+                if (notifications.length > 0) {
+                    countEl.classList.remove('d-none');
+                    countEl.textContent = notifications.length;
+                } else {
+                    countEl.classList.add('d-none');
+                }
+
+                listEl.innerHTML = notifications.length === 0
+                    ? '<div class="dropdown-item-text text-muted px-3 py-2">Нет новых уведомлений</div>'
+                    : notifications.map(n => `
+                <a class="dropdown-item d-flex justify-content-between align-items-center notification-item px-3 py-2"
+                   href="#" data-id="${n.id}" data-event-id="${n.event_id}"
+                   onclick="markAsRead(${n.id}, ${n.event_id})">
+                    <div class="small me-3">${n.message}</div>
+                    <i class="bi bi-circle-fill text-primary small flex-shrink-0"></i>
+                </a>
+            `).join('');
+            } catch (error) {
+                console.error('Ошибка загрузки уведомлений:', error);
+            }
+        }
+
+        // Отметить уведомление как прочитанное и перейти к событию
+        async function markAsRead(notificationId, eventId) {
+            const token = localStorage.getItem('authToken');
+            try {
+                await fetch(`/api/notifications/${notificationId}/read`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } catch (e) { /* игнорируем */ }
+            window.location.href = `event-details.html?id=${eventId}`;
+        }
+
+        // Периодическое обновление (раз в 30 секунд)
+        setInterval(loadNotifications, 30000);
+
+        function getEventTypeText(eventType) {
+            const types = {
+                'training': 'Тренировка',
+                'competition': 'Соревнование',
+                'tournament': 'Турнир',
+                'friendly': 'Товарищеская встреча',
+                'marathon': 'Марафон',
+                'workshop': 'Мастер-класс'
+            };
+            return types[eventType] || eventType || 'Мероприятие';
+        }
+
+        // Загрузка профиля текущего пользователя
+        async function loadUserProfile() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return null;
+
+            try {
+                const response = await fetch('/api/user', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const user = await response.json();
+                    currentUserId = user.id;
+                    document.getElementById('headerUserName').textContent = user.full_name || 'Пользователь';
+                    return user;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки профиля:', error);
+            }
+            return null;
+        }
+
+        // Загрузка деталей события
         async function loadEventDetails() {
             const urlParams = new URLSearchParams(window.location.search);
             const eventId = urlParams.get('id');
-
-            if (!eventId) {
-                showError('Событие не найдено');
-                return;
-            }
+            if (!eventId) { showError('Событие не найдено'); return; }
 
             try {
                 const response = await fetch(`/api/events/${eventId}`);
                 if (!response.ok) throw new Error('Событие не найдено');
-
                 const event = await response.json();
-                renderEventDetails(event);
+
+                let isParticipant = false;
+                let isOrganizer = (event.organizer_id === currentUserId);
+                const token = localStorage.getItem('authToken');
+                if (token && currentUserId) {
+                    try {
+                        const partResp = await fetch('/api/events/participating', {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (partResp.ok) {
+                            const participating = await partResp.json();
+                            isParticipant = participating.some(e => e.id === event.id);
+                        }
+                    } catch (e) { }
+                }
+
+                renderEventDetails(event, isParticipant);
+                initReviewSystem(event, isParticipant, isOrganizer);
             } catch (error) {
                 showError(error.message);
             }
         }
 
-        // Новая функция для безопасного создания даты
         function createEventDate(event) {
-
-            // Создаем базовую дату без времени
             const datePart = new Date(event.event_date);
-
-            // Если дата невалидна, возвращаем null
             if (isNaN(datePart.getTime())) return null;
-
-            // Добавляем время
             const [hours, minutes] = event.event_time.split(':');
             datePart.setHours(parseInt(hours, 10));
             datePart.setMinutes(parseInt(minutes, 10));
-
             return datePart;
         }
 
-        // Функция для отображения деталей события
-        function renderEventDetails(event) {
-            // Форматируем дату и время
+        function renderEventDetails(event, isParticipant = false) {
             const eventDate = createEventDate(event);
             let formattedDate = event.event_date;
             let formattedTime = event.event_time.substring(0, 5);
 
             if (eventDate) {
                 formattedDate = eventDate.toLocaleDateString('ru-RU', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
+                    day: 'numeric', month: 'long', year: 'numeric'
                 });
-
                 formattedTime = eventDate.toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    hour: '2-digit', minute: '2-digit'
                 });
             }
 
-            // Иконки для видов спорта
             const sportIcons = {
-                running: '🏃 Бег',
-                cycling: '🚴 Велоспорт',
-                football: '⚽ Футбол',
-                basketball: '🏀 Баскетбол',
-                tennis: '🎾 Теннис',
-                volleyball: '🏐 Волейбол',
-                swimming: '🏊 Плавание',
-                yoga: '🧘 Йога'
+                running: '🏃 Бег', cycling: '🚴 Велоспорт', football: '⚽ Футбол',
+                basketball: '🏀 Баскетбол', tennis: '🎾 Теннис', volleyball: '🏐 Волейбол',
+                swimming: '🏊 Плавание', yoga: '🧘 Йога'
             };
 
-            // Форматируем цену
             const price = parseFloat(event.price);
             const priceText = price > 0 ? `${price.toFixed(2)} ₽` : 'Бесплатно';
-
-            // Возрастные ограничения
             const ageText = event.age_restriction > 0 ? `${event.age_restriction}+` : 'Без ограничений';
-
-            // Участники
             const maxParticipants = event.max_participants || '∞';
             const participants = event.participant_count || 0;
             const available = maxParticipants !== '∞' ? maxParticipants - participants : '∞';
 
-            // Обновляем элементы страницы
+            // Заполнение данных
             document.getElementById('eventTitle').textContent = event.title;
             document.getElementById('eventSportBadge').textContent = sportIcons[event.sport_type] || event.sport_type;
-            document.getElementById('eventTypeBadge').textContent = event.event_type;
+            document.getElementById('eventTypeBadge').textContent = getEventTypeText(event.event_type);
             document.getElementById('eventDateTime').textContent = `${formattedDate}, ${formattedTime}`;
             document.getElementById('eventDescription').textContent = event.description || 'Описание отсутствует';
-
             document.getElementById('eventDate').textContent = formattedDate;
             document.getElementById('eventTime').textContent = formattedTime;
             document.getElementById('eventPrice').textContent = priceText;
             document.getElementById('eventParticipants').textContent = `${participants} / ${maxParticipants}`;
             document.getElementById('eventAgeRestriction').textContent = ageText;
             document.getElementById('eventLocation').textContent = event.location;
-
             document.getElementById('organizerName').textContent = event.organizer_name || 'Неизвестный организатор';
-
             document.getElementById('availableSpots').textContent = available;
             document.getElementById('maxParticipants').textContent = maxParticipants;
 
-            // Прогресс-бар участников
             if (maxParticipants !== '∞' && maxParticipants > 0) {
                 const progress = (participants / maxParticipants) * 100;
                 const progressBar = document.getElementById('participantsProgress');
@@ -333,51 +501,297 @@
                 progressBar.classList.add(progress > 80 ? 'bg-danger' : 'bg-success');
             }
 
-            // Обработчик кнопки участия
-            document.getElementById('participateBtn').addEventListener('click', async () => {
+            const isOrganizer = (event.organizer_id === currentUserId);
+            const now = new Date();
+            const eventDateTime = createEventDate(event);
+            const isPast = eventDateTime && eventDateTime <= now;
+            const isActive = event.status === 'active';
+            const canParticipate = !isOrganizer && !isParticipant && !isPast && isActive;
+
+            const participateBtn = document.getElementById('participateBtn');
+
+            if (isOrganizer) {
+                participateBtn.style.display = 'none';
+            } else {
+                participateBtn.style.display = 'block';
+                if (!canParticipate) {
+                    participateBtn.disabled = true;
+                    if (isParticipant) {
+                        participateBtn.textContent = 'Вы уже участвуете';
+                    } else if (isPast) {
+                        participateBtn.textContent = 'Событие уже началось';
+                    } else if (!isActive) {
+                        participateBtn.textContent = 'Событие неактивно';
+                    }
+                    participateBtn.classList.remove('btn-primary');
+                    participateBtn.classList.add('btn-secondary');
+                } else {
+                    participateBtn.disabled = false;
+                    participateBtn.textContent = 'Принять участие';
+                    participateBtn.classList.remove('btn-secondary');
+                    participateBtn.classList.add('btn-primary');
+                    participateBtn.onclick = async () => {
+                        const token = localStorage.getItem('authToken');
+                        if (!token) {
+                            alert('Для участия необходимо войти в систему');
+                            return;
+                        }
+                        try {
+                            const response = await fetch(`/api/events/${event.id}/participate`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            if (response.ok) {
+                                alert('Вы успешно зарегистрировались на событие!');
+                                loadEventDetails();
+                            } else {
+                                const error = await response.json();
+                                throw new Error(error.error || 'Не удалось зарегистрироваться');
+                            }
+                        } catch (error) {
+                            alert(`Ошибка: ${error.message}`);
+                        }
+                    };
+                }
+            }
+        }
+
+        async function initReviewSystem(event, isParticipant, isOrganizer) {
+            const token = localStorage.getItem('authToken');
+            if (!token || !(isParticipant || isOrganizer)) return;
+
+            // Проверим, завершено ли
+            const eventDate = createEventDate(event);
+            const isPast = eventDate && eventDate <= new Date();
+            const isTerminal = ['completed', 'cancelled'].includes(event.status);
+            if (!isPast && !isTerminal) return;
+
+            if (isOrganizer) {
+                let participants = [];
                 try {
-                    const token = localStorage.getItem('authToken');
-                    if (!token) {
-                        alert('Для участия необходимо войти в систему');
+                    const resp = await fetch(`/api/events/${event.id}/participants`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!resp.ok) {
+                        console.error('Не удалось получить участников');
                         return;
                     }
+                    participants = await resp.json();
+                } catch (e) {
+                    console.error(e);
+                    return;
+                }
 
-                    const response = await fetch(`/api/events/${event.id}/participate`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
+                if (participants.length === 0) {
+                    document.getElementById('reviewCard').style.display = 'block';
+                    document.getElementById('reviewCard').innerHTML = '<div class="card-body text-muted">Нет участников для оценки</div>';
+                    return;
+                }
+
+                // Покажем карточку со списком участников
+                const reviewCard = document.getElementById('reviewCard');
+                reviewCard.style.display = 'block';
+                reviewCard.querySelector('.card-header').innerHTML = '<h5 class="mb-0">Оценить участников</h5>';
+                let html = '<ul class="list-group list-group-flush">';
+                for (const p of participants) {
+                    if (p.id === currentUserId) continue; // себя не оцениваем
+                    // Проверим, уже оставлен ли отзыв
+                    let alreadyReviewed = false;
+                    try {
+                        const checkResp = await fetch(`/api/reviews/check?event_id=${event.id}&reviewee_id=${p.id}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (checkResp.ok) {
+                            const checkData = await checkResp.json();
+                            if (!checkData.can_review && checkData.reason === 'Вы уже оставили отзыв') {
+                                alreadyReviewed = true;
+                            }
+                        }
+                    } catch (e) { }
+
+                    html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>${p.username || 'Участник'}</div>
+                    <button class="btn btn-sm btn-outline-primary review-participant-btn"
+                            data-participant-id="${p.id}" data-participant-name="${p.username || 'Участник'}"
+                            ${alreadyReviewed ? 'disabled' : ''}>
+                        ${alreadyReviewed ? 'Оценено' : 'Оставить отзыв'}
+                    </button>
+                </li>`;
+                }
+                html += '</ul>';
+                reviewCard.querySelector('.card-body').innerHTML = html;
+
+                // Обработчик кнопок "Оставить отзыв"
+                document.querySelectorAll('.review-participant-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const revieweeId = parseInt(this.dataset.participantId);
+                        const revieweeName = this.dataset.participantName;
+                        // Откроем модальное окно
+                        document.getElementById('reviewTargetModal').textContent = `Оценить: ${revieweeName}`;
+                        document.getElementById('reviewRatingModal').value = 0;
+                        document.getElementById('reviewCommentModal').value = '';
+                        // Сбросим звёзды
+                        document.querySelectorAll('#starRatingModal .bi-star-fill').forEach(star => {
+                            star.classList.remove('bi-star-fill', 'text-warning');
+                            star.classList.add('bi-star', 'text-muted');
+                        });
+
+                        const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
+                        modal.show();
+
+                        // Обработчик отправки в модальном окне
+                        const submitBtn = document.getElementById('submitReviewModalBtn');
+                        submitBtn.onclick = async () => {
+                            const rating = parseInt(document.getElementById('reviewRatingModal').value);
+                            if (!rating) {
+                                alert('Поставьте оценку');
+                                return;
+                            }
+                            const comment = document.getElementById('reviewCommentModal').value.trim();
+                            try {
+                                const resp = await fetch('/api/reviews', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${token}`
+                                    },
+                                    body: JSON.stringify({
+                                        event_id: event.id,
+                                        reviewee_id: revieweeId,
+                                        rating,
+                                        comment: comment || null
+                                    })
+                                });
+                                if (resp.ok) {
+                                    alert('Отзыв отправлен!');
+                                    modal.hide();
+                                    // Обновим кнопку
+                                    btn.disabled = true;
+                                    btn.textContent = 'Оценено';
+                                } else {
+                                    const err = await resp.json();
+                                    alert(err.error || 'Ошибка');
+                                }
+                            } catch (e) {
+                                alert('Ошибка сети');
+                            }
+                        };
+                    });
+                });
+
+                // Звёзды в модальном окне
+                const stars = document.querySelectorAll('.star-icon-modal');
+                let selectedRatingModal = 0;
+                stars.forEach(star => {
+                    star.addEventListener('click', function () {
+                        selectedRatingModal = parseInt(this.dataset.rating);
+                        document.getElementById('reviewRatingModal').value = selectedRatingModal;
+                        stars.forEach(s => {
+                            if (parseInt(s.dataset.rating) <= selectedRatingModal) {
+                                s.classList.remove('bi-star', 'text-muted');
+                                s.classList.add('bi-star-fill', 'text-warning');
+                            } else {
+                                s.classList.add('bi-star', 'text-muted');
+                                s.classList.remove('bi-star-fill', 'text-warning');
+                            }
+                        });
+                    });
+                });
+
+                return;
+            }
+
+            // Участник оценивает организатора (старая логика)
+            const reviewCard = document.getElementById('reviewCard');
+            reviewCard.style.display = 'block';
+            let revieweeId = event.organizer_id;
+            let targetText = `Организатор: ${event.organizer_name}`;
+
+            document.getElementById('reviewTarget').textContent = targetText;
+
+            // Звёзды
+            const stars = document.querySelectorAll('.star-icon');
+            let selectedRating = 0;
+            stars.forEach(star => {
+                star.addEventListener('click', function () {
+                    selectedRating = parseInt(this.dataset.rating);
+                    document.getElementById('reviewRating').value = selectedRating;
+                    stars.forEach(s => {
+                        if (parseInt(s.dataset.rating) <= selectedRating) {
+                            s.classList.remove('bi-star', 'text-muted');
+                            s.classList.add('bi-star-fill', 'text-warning');
+                        } else {
+                            s.classList.add('bi-star', 'text-muted');
+                            s.classList.remove('bi-star-fill', 'text-warning');
                         }
                     });
+                });
+            });
 
-                    if (response.ok) {
-                        alert('Вы успешно зарегистрировались на событие!');
-                        // Перезагружаем данные события
-                        loadEventDetails();
+            // Отправка (уже реализована ранее)
+            document.getElementById('submitReviewBtn').addEventListener('click', async () => {
+                const rating = parseInt(document.getElementById('reviewRating').value);
+                if (!rating) {
+                    alert('Пожалуйста, поставьте оценку');
+                    return;
+                }
+                const comment = document.getElementById('reviewComment').value.trim();
+                const token = localStorage.getItem('authToken');
+                try {
+                    const resp = await fetch('/api/reviews', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            event_id: event.id,
+                            reviewee_id: revieweeId,
+                            rating,
+                            comment: comment || null
+                        })
+                    });
+                    if (resp.ok) {
+                        document.getElementById('reviewSuccess').classList.remove('d-none');
+                        document.getElementById('submitReviewBtn').disabled = true;
                     } else {
-                        const error = await response.json();
-                        throw new Error(error.error || 'Не удалось зарегистрироваться');
+                        const err = await resp.json();
+                        alert(err.error || 'Ошибка');
                     }
-                } catch (error) {
-                    alert(`Ошибка: ${error.message}`);
+                } catch (e) {
+                    alert('Ошибка сети');
                 }
             });
         }
 
-        // Функция для отображения ошибки
         function showError(message) {
             document.querySelector('.event-header').innerHTML = `
-                <div class="container text-center">
-                    <h1 class="text-danger">Ошибка</h1>
-                    <p class="lead">${message}</p>
-                    <a href="index.html" class="btn btn-primary mt-3">
-                        <i class="bi bi-arrow-left me-2"></i> Вернуться на главную
-                    </a>
-                </div>
-            `;
+        <div class="container text-center">
+            <h1 class="text-danger">Ошибка</h1>
+            <p class="lead">${message}</p>
+            <a href="index.html" class="btn btn-primary mt-3">
+                <i class="bi bi-arrow-left me-2"></i> Вернуться на главную
+            </a>
+        </div>
+    `;
         }
 
-        // Обработчик загрузки страницы
-        document.addEventListener('DOMContentLoaded', loadEventDetails);
+        // Обработчик выхода
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#logoutLink')) {
+                e.preventDefault();
+                localStorage.removeItem('authToken');
+                window.location.href = 'aut.html';
+            }
+        });
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadUserProfile();
+            await loadEventDetails();
+            loadNotifications();
+        });
     </script>
 </body>
 
