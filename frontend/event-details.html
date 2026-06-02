@@ -499,6 +499,7 @@
             document.getElementById('eventParticipants').textContent = `${participants} / ${maxParticipants}`;
             document.getElementById('eventAgeRestriction').textContent = ageText;
             document.getElementById('eventLocation').textContent = event.location;
+            const organizerName = event.organizer_name || 'Неизвестный организатор';
             document.getElementById('organizerName').innerHTML = `<a href="public-profile.html?id=${event.organizer_id}" class="text-dark text-decoration-none">${escapeHtml(organizerName)}</a>`;
             document.getElementById('availableSpots').textContent = available;
             document.getElementById('maxParticipants').textContent = maxParticipants;
