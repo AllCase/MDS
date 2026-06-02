@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль пользователя - Match Day Sync</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script>
+        // Система защиты авторизации
+        (function () {
+            const allowedPages = ['welcome.html', 'aut.html', 'reg.html'];
+            const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+            const token = localStorage.getItem('authToken');
+            const isLoggedIn = !!token;
+            if (!isLoggedIn && !allowedPages.includes(currentPage)) {
+                sessionStorage.setItem('redirectUrl', window.location.href);
+                window.location.href = 'welcome.html';
+            }
+            if (isLoggedIn && allowedPages.includes(currentPage)) {
+                window.location.href = 'index.html';
+            }
+        })();
+    </script>
+    <style>
+        .profile-header {
+            background: linear-gradient(120deg, #1a2a6c, #b21f1f, #1a2a6c);
+            background-size: 200% 200%;
+            animation: gradientBG 15s ease infinite;
+            padding-top: 100px;
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border: 5px solid white;
+            margin-top: -75px;
+            z-index: 2;
+            position: relative;
+        }
+
+        .nav-pills .nav-link {
+            border-radius: 20px;
+            padding: 10px 20px;
+            margin-bottom: 10px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .nav-pills .nav-link.active {
+            background: linear-gradient(120deg, #1a2a6c, #b21f1f);
+            color: white;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .error-message {
+            color: #dc3545;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(220, 53, 69, 0.1);
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Шапка -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="logo.jpg" alt="MDS" height="60">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Главная</a></li>
+                    <li class="nav-item"><a class="nav-link" href="my_events.html">Мои мероприятия</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Календарь</a></li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <div class="dropdown me-3">
+                        <button class="btn btn-light position-relative" type="button" data-bs-toggle="dropdown"
+                            id="notificationsDropdown">
+                            <i class="bi bi-bell fs-5"></i>
+                            <span id="notificationsCount"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end"
+                            style="width:380px; max-height:400px; overflow-y:auto; padding:0;" id="notificationsMenu">
+                            <h6 class="dropdown-header px-3 pt-2">Уведомления</h6>
+                            <div id="notificationsList" class="px-2 pb-2"></div>
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
+                            data-bs-toggle="dropdown">
+                            <img src="Person.svg" class="me-2" width="32" height="32" alt="Профиль">
+                            <span id="headerUserName">Профиль</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="profile.html">Мой профиль</a></li>
+                            <li><a class="dropdown-item" href="my_events.html">Мои мероприятия</a></li>
+                            <li><a class="dropdown-item" href="settings.html">Настройки</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger" href="#" id="logoutLink">Выйти</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="profile-header text-center text-white pb-5 position-relative">
+        <div class="container">
+            <div class="d-flex justify-content-center">
+                <img src="Person.svg" class="profile-avatar rounded-circle shadow" alt="Аватар" id="profileAvatar">
+            </div>
+            <h1 class="mt-3 mb-0" id="profileUsername">@username</h1>
+            <p class="fs-5 text-light mb-1" id="profileFullName">Имя Фамилия</p>
+        </div>
+    </div>
+
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-lg-3 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <a href="index.html" class="btn btn-outline-primary mb-3 w-100">
+                            <i class="bi bi-house-door me-1"></i> На главную
+                        </a>
+                        <ul class="nav nav-pills flex-column">
+                            <li class="nav-item"><a class="nav-link active" href="#"><i class="bi bi-person me-2"></i>
+                                    Обзор профиля</a></li>
+                            <li class="nav-item"><a class="nav-link" href="my_events.html"><i
+                                        class="bi bi-calendar-event me-2"></i> Мои мероприятия</a></li>
+                            <li class="nav-item"><a class="nav-link" href="settings.html"><i
+                                        class="bi bi-gear me-2"></i> Настройки</a></li>
+                            <li class="nav-item mt-3"><a class="nav-link text-danger" href="#" id="sidebarLogoutLink"><i
+                                        class="bi bi-box-arrow-right me-2"></i> Выйти</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-9">
+                <div id="profileError" class="error-message" style="display: none;"></div>
+
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">О пользователе</h5>
+                    </div>
+                    <div class="card-body">
+                        <p id="profileBio">Загрузка...</p>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <p class="mb-1"><i class="bi bi-envelope me-2"></i> <span id="profileEmail">-</span></p>
+                                <p class="mb-1"><i class="bi bi-calendar me-2"></i> Дата рождения: <span
+                                        id="profileBirthDate">Не указана</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><i class="bi bi-calendar-plus me-2"></i> На сайте с: <span
+                                        id="profileCreatedAt">-</span></p>
+                                <p class="mb-1"><i class="bi bi-geo-alt me-2"></i> Город: <span id="profileCity">Не
+                                        указан</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Рейтинг и отзывы</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="profileRating">Загрузка...</div>
+                        <hr>
+                        <h6>Отзывы</h6>
+                        <div id="profileReviews">Загрузка...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5>Match Day Sync</h5>
+                    <p>Платформа для организации спортивных мероприятий.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Контакты</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-envelope me-2"></i> contact@MatchDaySync</li>
+                        <li><i class="bi bi-telephone me-2"></i> +7 (495) 123-45-67</li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h5>Мы в соцсетях</h5>
+                    <div class="d-flex gap-3"><a href="#" class="text-white fs-4"><i class="bi bi-telegram"></i></a><a
+                            href="#" class="text-white fs-4"><i class="bi bi-vk"></i></a></div>
+                </div>
+            </div>
+            <hr class="bg-light">
+            <div class="text-center"><small>© 2025 Match Day Sync</small></div>
+        </div>
+    </footer>
+
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Загрузка...</span></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentUserId = null;
+        let targetUserId = null;
+
+        function showLoading() { document.getElementById('loadingOverlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
+        function showError(message) {
+            const errorDiv = document.getElementById('profileError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        function hideError() { document.getElementById('profileError').style.display = 'none'; }
+
+        async function fetchCurrentUser() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return null;
+            try {
+                const resp = await fetch('/api/user', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (resp.ok) {
+                    const user = await resp.json();
+                    currentUserId = user.id;
+                    document.getElementById('headerUserName').textContent = user.full_name || 'Пользователь';
+                    return user;
+                }
+            } catch (e) { console.error(e); }
+            return null;
+        }
+
+        async function loadPublicProfile() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const userId = urlParams.get('id');
+            if (!userId) {
+                showError('Пользователь не указан');
+                return;
+            }
+            targetUserId = parseInt(userId);
+            if (currentUserId === targetUserId) {
+                window.location.href = 'profile.html';
+                return;
+            }
+            showLoading();
+            hideError();
+            const token = localStorage.getItem('authToken');
+            try {
+                const userResp = await fetch(`/api/user?id=${targetUserId}`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+                if (!userResp.ok) throw new Error('Не удалось загрузить профиль');
+                const user = await userResp.json();
+                document.getElementById('profileUsername').textContent = `@${user.username}`;
+                document.getElementById('profileFullName').textContent = user.full_name || 'Имя не указано';
+                document.getElementById('profileEmail').textContent = user.email;
+                document.getElementById('profileBio').textContent = user.about_me || 'Пользователь не добавил информацию о себе';
+                document.getElementById('profileCity').textContent = user.city || 'Не указан';
+                document.getElementById('profileBirthDate').textContent = user.birth_date ? new Date(user.birth_date).toLocaleDateString('ru-RU') : 'Не указана';
+                document.getElementById('profileCreatedAt').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : '-';
+
+                // рейтинг и отзывы
+                const ratingResp = await fetch(`/api/users/${targetUserId}/rating`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+                if (ratingResp.ok) {
+                    const ratingData = await ratingResp.json();
+                    const ratingHtml = `<div class="d-flex align-items-center"><span class="fs-2 me-3">${ratingData.average_rating > 0 ? '⭐' + ratingData.average_rating : 'Нет оценок'}</span><span class="text-muted">(${ratingData.total_reviews} отзывов)</span></div>`;
+                    document.getElementById('profileRating').innerHTML = ratingHtml;
+                } else {
+                    document.getElementById('profileRating').innerHTML = '<p class="text-muted">Рейтинг не загружен</p>';
+                }
+                const reviewsResp = await fetch(`/api/users/${targetUserId}/reviews`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} });
+                if (reviewsResp.ok) {
+                    const reviews = await reviewsResp.json();
+                    if (reviews.length === 0) {
+                        document.getElementById('profileReviews').innerHTML = '<p class="text-muted">Пока нет отзывов</p>';
+                    } else {
+                        let html = '';
+                        reviews.forEach(r => {
+                            const stars = '⭐'.repeat(r.rating);
+                            html += `<div class="mb-2 p-2 border rounded"><div class="d-flex justify-content-between"><strong>${escapeHtml(r.reviewer_username)}</strong><small>${new Date(r.created_at).toLocaleDateString('ru-RU')}</small></div><div>${stars}</div><p class="mb-1">${escapeHtml(r.comment || '')}</p><small class="text-muted">Событие: ${escapeHtml(r.event_title)}</small></div>`;
+                        });
+                        document.getElementById('profileReviews').innerHTML = html;
+                    }
+                } else {
+                    document.getElementById('profileReviews').innerHTML = '<p class="text-muted">Отзывы не загружены</p>';
+                }
+            } catch (err) {
+                console.error(err);
+                showError('Ошибка загрузки профиля');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            window.location.href = 'aut.html';
+        }
+
+        // уведомления (как на других страницах)
+        async function loadNotifications() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+            try {
+                const resp = await fetch('/api/notifications?unread_only=true', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!resp.ok) return;
+                const notifications = await resp.json();
+                const countEl = document.getElementById('notificationsCount');
+                const listEl = document.getElementById('notificationsList');
+                if (notifications.length > 0) { countEl.classList.remove('d-none'); countEl.textContent = notifications.length; }
+                else { countEl.classList.add('d-none'); }
+                listEl.innerHTML = notifications.length === 0 ? '<div class="dropdown-item-text text-muted px-3 py-2">Нет новых уведомлений</div>' :
+                    notifications.map(n => `<a class="dropdown-item d-flex justify-content-between align-items-center notification-item px-3 py-2" href="#" data-id="${n.id}" data-event-id="${n.event_id}" onclick="markAsRead(${n.id}, ${n.event_id})"><div class="small me-3">${escapeHtml(n.message)}</div><i class="bi bi-circle-fill text-primary small flex-shrink-0"></i></a>`).join('');
+            } catch (e) { console.error(e); }
+        }
+        async function markAsRead(notificationId, eventId) {
+            const token = localStorage.getItem('authToken');
+            try { await fetch(`/api/notifications/${notificationId}/read`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); } catch (e) { }
+            window.location.href = `event-details.html?id=${eventId}`;
+        }
+        setInterval(loadNotifications, 30000);
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchCurrentUser();
+            await loadPublicProfile();
+            loadNotifications();
+            document.getElementById('logoutLink')?.addEventListener('click', (e) => { e.preventDefault(); logout(); });
+            document.getElementById('sidebarLogoutLink')?.addEventListener('click', (e) => { e.preventDefault(); logout(); });
+        });
+    </script>
+</body>
+
+</html>

@@ -499,7 +499,7 @@
             document.getElementById('eventParticipants').textContent = `${participants} / ${maxParticipants}`;
             document.getElementById('eventAgeRestriction').textContent = ageText;
             document.getElementById('eventLocation').textContent = event.location;
-            document.getElementById('organizerName').textContent = event.organizer_name || 'Неизвестный организатор';
+            document.getElementById('organizerName').innerHTML = `<a href="public-profile.html?id=${event.organizer_id}" class="text-dark text-decoration-none">${escapeHtml(organizerName)}</a>`;
             document.getElementById('availableSpots').textContent = available;
             document.getElementById('maxParticipants').textContent = maxParticipants;
 
@@ -594,7 +594,7 @@
                         ratingDisplay = '<span class="ms-2 small text-muted">нет отзывов</span>';
                     }
                     html += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div><i class="bi bi-person"></i> ${escapeHtml(p.username)}</div>
+                        <div><i class="bi bi-person"></i> <a href="public-profile.html?id=${p.id}" class="text-decoration-none">${escapeHtml(p.username)}</a></div>
                         <div>${ratingDisplay}</div>
                      </li>`;
                 });
