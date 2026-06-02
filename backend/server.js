@@ -17,9 +17,9 @@ const sslConfig = process.env.DB_SSL === 'true' ? {
 
 const pool = new Pool({
   user: process.env.DB_USER || 'gen_user',
-  host: process.env.DB_HOST || '6efc77aa9da03edbf209d4a0.twc1.net',
+  host: process.env.DB_HOST || '5.129.196.67',
   database: process.env.DB_NAME || 'default_db',
-  password: process.env.DB_PASSWORD || 'YZ>|^DuMF+P7LX',
+  password: process.env.DB_PASSWORD || '+l-1)I2{yeFB@X',
   port: process.env.DB_PORT || 5432,
   ssl: sslConfig
 });
