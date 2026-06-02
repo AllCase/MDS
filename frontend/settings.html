@@ -361,7 +361,8 @@
 
                                     <div class="mb-3">
                                         <label class="form-label">Дата рождения</label>
-                                        <input type="date" class="form-control" name="birth_date" id="birthDateInput">
+                                        <input type="date" class="form-control" name="birth_date" id="birthDateInput"
+                                            min="1900-01-01" max="">
                                     </div>
 
                                     <div class="mb-3">
@@ -846,6 +847,17 @@
                 document.getElementById('aboutMeInput').value = user.bio || '';
             }
             loadNotifications()
+
+            // Ограничение даты рождения
+            const birthInput = document.getElementById('birthDateInput');
+            if (birthInput) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                birthInput.max = `${yyyy}-${mm}-${dd}`;
+                // также установим минимальный год (1900) в HTML уже есть min
+            }
             // Обработка отправки формы профиля
             const profileForm = document.getElementById('profileForm');
             profileForm.addEventListener('submit', async (e) => {
