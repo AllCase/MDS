@@ -187,6 +187,8 @@
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <p class="mb-1"><i class="bi bi-envelope me-2"></i> <span id="profileEmail">-</span></p>
+                                <p class="mb-1"><i class="bi bi-telephone me-2"></i> Телефон: <span id="profilePhone">Не
+                                        указан</span></p>
                                 <p class="mb-1"><i class="bi bi-calendar me-2"></i> Дата рождения: <span
                                         id="profileBirthDate">Не указана</span></p>
                             </div>
@@ -295,6 +297,7 @@
                 document.getElementById('profileUsername').textContent = `@${user.username}`;
                 document.getElementById('profileFullName').textContent = user.full_name || 'Имя не указано';
                 document.getElementById('profileEmail').textContent = user.email;
+                document.getElementById('profilePhone').textContent = user.phone || 'Не указан';
                 document.getElementById('profileBio').textContent = user.about_me || 'Пользователь не добавил информацию о себе';
                 document.getElementById('profileCity').textContent = user.city || 'Не указан';
                 document.getElementById('profileBirthDate').textContent = user.birth_date ? new Date(user.birth_date).toLocaleDateString('ru-RU') : 'Не указана';
