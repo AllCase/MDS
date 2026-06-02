@@ -171,6 +171,17 @@ app.post('/api/register', async (req, res) => {
     return res.status(400).json({ error: 'Пароль должен содержать минимум 6 символов' });
   }
 
+  // Валидация имени пользователя
+  if (username.length > 20) {
+    return res.status(400).json({ error: 'Имя пользователя не должно превышать 20 символов' });
+  }
+  if (/\s/.test(username)) {
+    return res.status(400).json({ error: 'Имя пользователя не должно содержать пробелов' });
+  }
+  if (!/^[A-Za-z0-9_]+$/.test(username)) {
+    return res.status(400).json({ error: 'Имя пользователя может содержать только латинские буквы, цифры и знак подчёркивания' });
+  }
+
   try {
     // Проверка существующего пользователя
     const userExists = await pool.query(
