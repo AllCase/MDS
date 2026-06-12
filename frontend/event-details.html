@@ -440,16 +440,19 @@
                 let isParticipant = false;
                 let isOrganizer = (event.organizer_id === currentUserId);
                 const token = localStorage.getItem('authToken');
-                if (token && currentUserId) {
+                if (token) {
                     try {
-                        const partResp = await fetch('/api/events/participating', {
+                        // Новый эндпоинт, который работает даже для завершённых событий
+                        const partResp = await fetch(`/api/events/${eventId}/check-participant`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (partResp.ok) {
-                            const participating = await partResp.json();
-                            isParticipant = participating.some(e => e.id === event.id);
+                            const data = await partResp.json();
+                            isParticipant = data.isParticipant;
                         }
-                    } catch (e) { }
+                    } catch (e) {
+                        console.error('Ошибка проверки участия:', e);
+                    }
                 }
 
                 renderEventDetails(event, isParticipant);
