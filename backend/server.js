@@ -1436,6 +1436,23 @@ app.get('/api/events/:id/participants', authenticateToken, async (req, res) => {
   }
 });
 
+
+// Проверка, является ли пользователь участником события (даже если событие завершено)
+app.get('/api/events/:id/check-participant', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.userId;
+  try {
+    const result = await pool.query(
+      'SELECT 1 FROM event_participants WHERE event_id = $1 AND user_id = $2',
+      [id, userId]
+    );
+    res.json({ isParticipant: result.rowCount > 0 });
+  } catch (error) {
+    console.error('Ошибка проверки участия:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // ==================================================================
 // Обслуживание статических файлов фронтенда
 // ==================================================================
